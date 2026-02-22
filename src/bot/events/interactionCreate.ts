@@ -6,7 +6,7 @@ export default {
     async execute(interaction: Interaction) {
         if (!interaction.isChatInputCommand()) return;
 
-        if (interaction.commandName === "create") {
+        if (interaction.commandName === "create" && interaction.options.getSubcommand()==="canvas") {
             const { execute } = await import("../commands/create.js");
             await execute(interaction);
         }
