@@ -1,9 +1,8 @@
-import "dotenv/config";
-
 import { ShardingManager } from "discord.js";
+import { DISCORD_TOKEN } from "./constants.js";
 
 const manager = new ShardingManager("./dist/bot/bot.js", {
-    token: process.env.DISCORD_TOKEN!,
+    token: DISCORD_TOKEN!,
 
     totalShards: "auto",
 });

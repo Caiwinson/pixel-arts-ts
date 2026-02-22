@@ -1,6 +1,6 @@
 import { REST, Routes } from "discord.js";
 import { data as createCommand } from "./commands/create.js";
-import { DISCORD_TOKEN } from "./constants.js";
+import { DISCORD_TOKEN } from "../constants.js";
 
 const commands = [createCommand.toJSON()];
 

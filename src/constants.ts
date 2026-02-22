@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { hexToInt } from "./utils.js";
+import { hexToInt } from "./bot/utils.js";
 
 // Environment configuration
 export const ENV = {

@@ -141,25 +141,29 @@ export function getCanvasHistory(
  * If the user doesn't exist, they are created with a default value.
  * Equivalent to get_db().
  */
-export const getDb: (userId: string) => string | number = db.transaction((userId: string) => {
-    const selectStmt = db.prepare("SELECT hex_code FROM colour WHERE user_id = ?");
-    let row = selectStmt.get(userId) as { hex_code: number } | undefined;
-
-    if (!row) {
-        const defaultValue = 0;
-        const insertStmt = db.prepare(
-            "INSERT OR IGNORE INTO colour (user_id, hex_code) VALUES (?, ?)"
+export const getDb: (userId: string) => string | number = db.transaction(
+    (userId: string) => {
+        const selectStmt = db.prepare(
+            "SELECT hex_code FROM colour WHERE user_id = ?",
         );
-        insertStmt.run(userId, defaultValue);
-        row = selectStmt.get(userId) as { hex_code: number };
-    }
+        let row = selectStmt.get(userId) as { hex_code: number } | undefined;
 
-    if (userId === "count") {
-        return row.hex_code;
-    } else {
-        return row.hex_code.toString(16).padStart(6, "0");
-    }
-});
+        if (!row) {
+            const defaultValue = 0;
+            const insertStmt = db.prepare(
+                "INSERT OR IGNORE INTO colour (user_id, hex_code) VALUES (?, ?)",
+            );
+            insertStmt.run(userId, defaultValue);
+            row = selectStmt.get(userId) as { hex_code: number };
+        }
+
+        if (userId === "count") {
+            return row.hex_code;
+        } else {
+            return row.hex_code.toString(16).padStart(6, "0");
+        }
+    },
+);
 
 /**
  * Posts/updates a user's color or the special 'count' value.

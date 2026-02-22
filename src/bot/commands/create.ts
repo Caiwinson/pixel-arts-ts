@@ -5,7 +5,7 @@ import {
 } from "discord.js";
 import { createCanvasView } from "../ui/basic.js";
 import { createCanvasEmbed } from "../utils.js";
-import { COLOUR_OPTION } from "../constants.js";
+import { COLOUR_OPTION } from "../../constants.js";
 
 const colourChoices = Object.entries(COLOUR_OPTION).map(([name, data]) => ({
     name: name, // display name in the slash command
@@ -46,7 +46,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const BaseColour = interaction.options.getString("colour") || "ffffff";
     const size = interaction.options.getInteger("size") || 5;
 
-    const key = BaseColour.repeat(size**2);
+    const key = BaseColour.repeat(size ** 2);
 
     // Create embed using the key
     const embed = createCanvasEmbed(key);

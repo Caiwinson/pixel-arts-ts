@@ -12,8 +12,7 @@ export default {
                 const { execute } = await import("../commands/create.js");
                 await execute(interaction);
             }
-        }
-        else if (interaction.isButton()) {
+        } else if (interaction.isButton()) {
             const customId = interaction.customId;
             const id = customId.split(":")[0];
 

@@ -1,12 +1,10 @@
 import {
     ActionRowBuilder,
     ButtonBuilder,
-    ButtonStyle,
-    ChatInputCommandInteraction,
-    Client,
+    ButtonStyle
 } from "discord.js";
 
-import type { ButtonInteraction, EmbedBuilder, Interaction } from "discord.js";
+import type { ButtonInteraction} from "discord.js";
 import { createCanvasEmbed } from "../utils.js";
 import { getDb } from "../../database.js";
 

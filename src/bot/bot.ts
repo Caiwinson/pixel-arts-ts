@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, Events } from "discord.js";
-import { DISCORD_TOKEN } from "./constants.js";
+import { DISCORD_TOKEN } from "../constants.js";
 import { refreshCommands } from "./deploy-commands.js";
 
 // Import your interaction handler
