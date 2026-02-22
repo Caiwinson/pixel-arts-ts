@@ -7,12 +7,7 @@ export function hexToInt(hex: string): number {
     return parseInt(hex, 16);
 }
 
-export function createCanvasEmbed(
-    key: string,
-    showPlot = false,
-): EmbedBuilder | string {
-    if (!key || key.length === 0) return "Error";
-
+export function createCanvasEmbed(key: string, showPlot = false): EmbedBuilder {
     const embed = new EmbedBuilder()
         .setTitle("Pixel Arts")
         .setColor(EMBED_COLOUR)

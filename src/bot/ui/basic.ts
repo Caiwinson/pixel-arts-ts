@@ -52,5 +52,5 @@ export async function PixelButtonExecute(interaction: ButtonInteraction) {
     // original python snipper: key = key[:num] + colour + key[num + 6:]
     const newKey = key.slice(0, num) + colour + key.slice(num + 6);
     const embed = createCanvasEmbed(newKey);
-    await interaction.update({ embeds: [embed as EmbedBuilder] });
+    await interaction.update({ embeds: [embed] });
 }
