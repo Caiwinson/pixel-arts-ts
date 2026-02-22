@@ -6,13 +6,13 @@ import { refreshCommands } from "./deploy-commands.js";
 import interactionCreate from "./events/interactionCreate.js";
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
+    intents: [GatewayIntentBits.Guilds],
 });
 
 // Ready event
 client.once(Events.ClientReady, (c) => {
-  refreshCommands(c.application.id);
-  console.log(`✅ Logged in as ${c.user.tag}`);
+    refreshCommands(c.application.id);
+    console.log(`✅ Logged in as ${c.user.tag}`);
 });
 
 // Interaction event

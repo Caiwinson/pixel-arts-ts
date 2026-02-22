@@ -7,13 +7,13 @@ const commands = [createCommand.toJSON()];
 const rest = new REST({ version: "10" }).setToken(DISCORD_TOKEN!);
 
 export async function refreshCommands(application_id: string) {
-  try {
-    console.log("⏳ Refreshing / commands...");
-    await rest.put(Routes.applicationCommands(application_id!), {
-      body: commands,
-    });
-    console.log("✅ / commands reloaded!");
-  } catch (error) {
-    console.error(error);
-  }
+    try {
+        console.log("⏳ Refreshing / commands...");
+        await rest.put(Routes.applicationCommands(application_id!), {
+            body: commands,
+        });
+        console.log("✅ / commands reloaded!");
+    } catch (error) {
+        console.error(error);
+    }
 }
