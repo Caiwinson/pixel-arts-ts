@@ -1,0 +1,47 @@
+import "dotenv/config";
+import { hexToInt } from "./utils.js";
+
+// Environment configuration
+export const ENV = {
+  discord_token: process.env.DISCORD_TOKEN,
+  topggToken: process.env.TOPGG_TOKEN,
+  dblToken: process.env.DBL_TOKEN,
+  domainUrl: process.env.DOMAIN_URL,
+  databaseUrl: process.env.DATABASE_URL,
+  discordsMeToken: process.env.DISCORDS_ME_TOKEN,
+};
+
+// Individual constants for convenience
+export const DISCORD_TOKEN = ENV.discord_token;
+export const TOPGG_API_TOKEN = ENV.topggToken;
+export const DBL_API_TOKEN = ENV.dblToken;
+export const DISCORDS_ME_TOKEN = ENV.discordsMeToken;
+export const DOMAIN_URL = ENV.domainUrl;
+export const EMBED_COLOUR = hexToInt("5865f2");
+
+// Type definition for color options
+interface ColourOption {
+  hex: string;
+  emoji: string;
+}
+
+// Color options mapping
+export const COLOUR_OPTION: Record<string, ColourOption> = {
+  red: { hex: "ff0000", emoji: "<:red:1135073767861801041>" },
+  "red-orange": { hex: "ff4500", emoji: "<:red_orange:1135073770369994853>" },
+  orange: { hex: "ffa800", emoji: "<:orange:1135073772622331905>" },
+  yellow: { hex: "ffd635", emoji: "<:yellow:1135073774832717904>" },
+  green: { hex: "00a368", emoji: "<:green:1135073777093443695>" },
+  lime: { hex: "7eed56", emoji: "<:lime:1135073778553065503>" },
+  blue: { hex: "2450a4", emoji: "<:blue:1135073780721520640>" },
+  sky: { hex: "3690ea", emoji: "<:sky:1135073782621556767>" },
+  cyan: { hex: "51e9f4", emoji: "<:cyan:1135073784785801298>" },
+  purple: { hex: "811e9f", emoji: "<:purple:1135073786438357124>" },
+  violet: { hex: "b44ac0", emoji: "<:violet:1135073789051420712>" },
+  pink: { hex: "ff99aa", emoji: "<:pink:1135073790460690544>" },
+  brown: { hex: "9c6926", emoji: "<:brown:1135073792880820255>" },
+  black: { hex: "000000", emoji: "<:black:1135073794956996699>" },
+  gray: { hex: "898d90", emoji: "<:gray:1135073797163188346>" },
+  silver: { hex: "d4d7d9", emoji: "<:silver:1135073798933184612>" },
+  white: { hex: "ffffff", emoji: "<:white:1135073801114226768>" },
+};

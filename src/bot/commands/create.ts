@@ -2,8 +2,10 @@ import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   MessageFlags,
+  EmbedBuilder,
 } from "discord.js";
 import { createCanvasView } from "../ui/basic.js";
+import { createCanvasEmbed } from "../utils.js";
 
 export const data = new SlashCommandBuilder()
   .setName("create")
@@ -13,9 +15,13 @@ export const data = new SlashCommandBuilder()
   );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  // Reply to the user
+  const key = "ffffff".repeat(25);
+
+  // Create embed using the key
+  const embed = createCanvasEmbed(key);
   await interaction.reply({
-    content: "🎨 Canvas created! Ready to paint.",
+    content: `<@${interaction.user.id}> has created a canvas.`,
+    embeds: [createCanvasEmbed(key) as EmbedBuilder],
     components: createCanvasView(),
     flags: MessageFlags.Ephemeral,
   });
