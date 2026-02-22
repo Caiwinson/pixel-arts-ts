@@ -1,8 +1,4 @@
-import {
-    SlashCommandBuilder,
-    ChatInputCommandInteraction,
-    MessageFlags,
-} from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, MessageFlags } from "discord.js";
 import { createCanvasView } from "../ui/basic.js";
 import { createCanvasEmbed } from "../utils.js";
 import { COLOUR_OPTION } from "../../constants.js";
@@ -43,17 +39,40 @@ export const data = new SlashCommandBuilder()
     );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
+
+    // Check bot permission
+    if (interaction.inGuild()) {
+
+        const channel = interaction.channel;
+
+        if (!channel) return;
+
+        const permissions = channel.permissionsFor(interaction.client.user!);
+
+        if (!permissions?.has([
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.EmbedLinks,
+        ])) {
+            return interaction.reply({
+                content: "I don't have permission to send messages here.",
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
+    }
+
     const BaseColour = interaction.options.getString("colour") || "ffffff";
     const size = interaction.options.getInteger("size") || 5;
 
     const key = BaseColour.repeat(size ** 2);
 
-    // Create embed using the key
     const embed = createCanvasEmbed(key);
+
     await interaction.reply({
         content: `<@${interaction.user.id}> has created a canvas.`,
         embeds: [embed],
         components: createCanvasView(),
-        flags: MessageFlags.Ephemeral,
     });
+
 }
