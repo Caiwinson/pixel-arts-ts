@@ -21,7 +21,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const embed = createCanvasEmbed(key);
     await interaction.reply({
         content: `<@${interaction.user.id}> has created a canvas.`,
-        embeds: [createCanvasEmbed(key) as EmbedBuilder],
+        embeds: [embed as EmbedBuilder],
         components: createCanvasView(),
         flags: MessageFlags.Ephemeral,
     });

@@ -61,3 +61,8 @@ docker-compose.override.yml
 # =========================
 .npm/
 .eslintcache
+
+# =========================
+# Data
+# =========================
+data
