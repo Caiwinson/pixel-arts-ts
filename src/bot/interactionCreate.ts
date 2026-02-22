@@ -1,0 +1,50 @@
+import { Events } from "discord.js";
+import type { Interaction } from "discord.js";
+
+export default {
+    name: Events.InteractionCreate,
+    async execute(interaction: Interaction) {
+        try {
+            if (interaction.isChatInputCommand()) {
+                if (
+                    interaction.commandName === "create" &&
+                    interaction.options.getSubcommand() === "canvas"
+                ) {
+                    const { execute } = await import("./commands/create.js");
+                    await execute(interaction);
+                }
+            } else if (interaction.isButton()) {
+                const customId = interaction.customId;
+                const id = customId.split(":")[0];
+
+                if (id === "pb") {
+                    const { PixelButtonExecute } =
+                        await import("./ui/basic.js");
+                    await PixelButtonExecute(interaction);
+                }
+            }
+        } catch (error: any) {
+            console.error("Interaction error:", error);
+
+            if (error.code === 10062) return; // Unknown interaction
+
+            if (interaction.isRepliable()) {
+                if (interaction.replied || interaction.deferred) {
+                    await interaction
+                        .followUp({
+                            content: "Something went wrong.",
+                            ephemeral: true,
+                        })
+                        .catch(() => {});
+                } else {
+                    await interaction
+                        .reply({
+                            content: "Something went wrong.",
+                            ephemeral: true,
+                        })
+                        .catch(() => {});
+                }
+            }
+        }
+    },
+};

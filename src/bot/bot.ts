@@ -3,7 +3,7 @@ import { DISCORD_TOKEN } from "../constants.js";
 import { refreshCommands } from "./deploy-commands.js";
 
 // Import your interaction handler
-import interactionCreate from "./events/interactionCreate.js";
+import interactionCreate from "./interactionCreate.js";
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds],
