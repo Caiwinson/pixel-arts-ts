@@ -1,21 +1,24 @@
-import "dotenv/config"
+import "dotenv/config";
+import { Client, GatewayIntentBits, Events } from "discord.js";
 
-import {
-    Client,
-    GatewayIntentBits,
-    Events
-} from "discord.js"
+// Import your interaction handler
+import interactionCreate from "./events/interactionCreate.js";
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
-})
+        GatewayIntentBits.MessageContent,
+    ],
+});
 
-client.once(Events.ClientReady, (client) => {
-    console.log(`✅ Logged in as ${client.user.tag}`)
-})
+// Ready event
+client.once(Events.ClientReady, c => {
+    console.log(`✅ Logged in as ${c.user.tag}`);
+});
 
-client.login(process.env.DISCORD_TOKEN)
+// Interaction event
+client.on(Events.InteractionCreate, interactionCreate.execute);
+
+// Login
+client.login(process.env.DISCORD_TOKEN);
