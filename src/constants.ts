@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { hexToInt } from "./bot/utils.js";
+import { HexToInt } from "./bot/utils.js";
 
 // Environment configuration
 export const ENV = {
@@ -17,7 +17,7 @@ export const TOPGG_API_TOKEN = ENV.topggToken;
 export const DBL_API_TOKEN = ENV.dblToken;
 export const DISCORDS_ME_TOKEN = ENV.discordsMeToken;
 export const DOMAIN_URL = ENV.domainUrl;
-export const EMBED_COLOUR = hexToInt("5865f2");
+export const EMBED_COLOUR = HexToInt("5865f2");
 
 // Type definition for color options
 interface ColourOption {

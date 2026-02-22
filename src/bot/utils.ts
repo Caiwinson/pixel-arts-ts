@@ -1,7 +1,7 @@
 import { EmbedBuilder } from "discord.js";
 import { EMBED_COLOUR, DOMAIN_URL } from "../constants.js";
 
-export function hexToInt(hex: string): number {
+export function HexToInt(hex: string): number {
     // Remove leading "#" if present
     if (hex.startsWith("#")) hex = hex.slice(1);
     return parseInt(hex, 16);
