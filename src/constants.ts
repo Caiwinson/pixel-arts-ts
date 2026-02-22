@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { HexToInt } from "./bot/utils.js";
 
 // Environment configuration
