@@ -36,6 +36,7 @@ async function getColourName(hex: string): Promise<string> {
 
 export async function createColourPicker(
     defaultHex: string,
+    uiType: string = "basic",
     extra_colours: string[] = [],
 ) {
     const options: StringSelectMenuOptionBuilder[] = [];
@@ -126,7 +127,7 @@ export async function createColourPicker(
     );
 
     return new StringSelectMenuBuilder()
-        .setCustomId("cc:select")
+        .setCustomId("cc:" + uiType)
         .setPlaceholder("Select a Colour")
         .addOptions(options);
 }

@@ -54,7 +54,7 @@ export async function createColourPickerView(
     defaultHex: string,
     extra_colours: string[] = [],
 ): Promise<ActionRowBuilder<StringSelectMenuBuilder>> {
-    const menu = await createColourPicker(defaultHex, extra_colours);
+    const menu = await createColourPicker(defaultHex, "basic", extra_colours);
 
     return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
 }

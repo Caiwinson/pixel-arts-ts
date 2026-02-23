@@ -7,7 +7,11 @@ import {
 import { createCanvasView, createColourPickerView } from "../ui/basic.js";
 import { createCanvasEmbed } from "../utils.js";
 import { COLOUR_OPTION } from "../../constants.js";
-import { getUserColour } from "../../database.js";
+import {
+    appendCanvasCount,
+    appendPixelUpdate,
+    getUserColour,
+} from "../../database.js";
 
 const colourChoices = Object.entries(COLOUR_OPTION).map(([name, data]) => ({
     name: name, // display name in the slash command
@@ -89,4 +93,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             await createColourPickerView(getUserColour(interaction.user.id)),
         ],
     });
+
+    appendPixelUpdate(message.id, null, key, interaction.user.id);
+    appendCanvasCount();
 }

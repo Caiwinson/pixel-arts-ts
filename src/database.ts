@@ -30,22 +30,22 @@ function initDb() {
 
     const schema = `
         CREATE TABLE IF NOT EXISTS timelapse (
-            guild_id TEXT,
-            channel_id TEXT,
-            message_id TEXT,
+
+            message_id TEXT PRIMARY KEY,
             key TEXT,
             user_id TEXT,
             timestamp INTEGER,
             readable_time TEXT
+
         );
+
+        CREATE INDEX IF NOT EXISTS idx_timelapse_lookup
+        ON timelapse (message_id, timestamp);
 
         CREATE TABLE IF NOT EXISTS colour (
             user_id TEXT PRIMARY KEY,
             hex_code INTEGER
         );
-
-        CREATE INDEX IF NOT EXISTS idx_timelapse_lookup
-        ON timelapse (guild_id, channel_id, message_id, timestamp);
 
         CREATE TABLE IF NOT EXISTS vote (
             user_id TEXT PRIMARY KEY,
@@ -56,6 +56,13 @@ function initDb() {
             hash TEXT PRIMARY KEY,
             key TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS canvas_count (
+            id INTEGER PRIMARY KEY CHECK (id = 0),
+            count INTEGER NOT NULL
+        );
+
+        INSERT OR IGNORE INTO canvas_count (id, count) VALUES (0, 0);
     `;
     db.exec(schema);
 }
@@ -97,43 +104,71 @@ export interface CanvasHistoryRow {
  * Equivalent to append_pixel_update().
  */
 export function appendPixelUpdate(
-    guildId: string,
-    channelId: string,
     messageId: string,
-    key: string,
+    dkey: string | null | undefined,
+    fkey: string,
     userId: string,
 ): void {
     const ts = Math.floor(Date.now() / 1000);
+
     const readable = new Date(ts * 1000)
         .toISOString()
         .replace("T", " ")
         .substring(0, 19);
 
+    let keyToStore: string;
+
+    if (!dkey) {
+        keyToStore = fkey;
+    } else {
+        const countStmt = db.prepare(`
+            SELECT key FROM timelapse
+            WHERE message_id = ?
+            ORDER BY timestamp DESC
+            LIMIT 10
+        `);
+
+        const rows = countStmt.all(messageId) as { key: string }[];
+
+        let deltaCount = 0;
+
+        for (const row of rows) {
+            if (row.key.includes(":")) {
+                deltaCount++;
+            } else {
+                break;
+            }
+        }
+
+        keyToStore = deltaCount >= 10 ? fkey : dkey;
+    }
+
     const stmt = db.prepare(`
         INSERT INTO timelapse (
-            guild_id, channel_id, message_id, key, user_id, timestamp, readable_time
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            message_id,
+            key,
+            user_id,
+            timestamp,
+            readable_time
+        ) VALUES (?, ?, ?, ?, ?)
     `);
 
-    stmt.run(guildId, channelId, messageId, key, userId, ts, readable);
+    stmt.run(messageId, keyToStore, userId, ts, readable);
 }
 
 /**
  * Retrieves the full history of a canvas.
  * Equivalent to get_canvas_history().
  */
-export function getCanvasHistory(
-    guildId: string,
-    channelId: string,
-    messageId: string,
-): CanvasHistoryRow[] {
+export function getCanvasHistory(messageId: string): CanvasHistoryRow[] {
     const stmt = db.prepare(`
         SELECT key, user_id, timestamp, readable_time
         FROM timelapse
-        WHERE guild_id = ? AND channel_id = ? AND message_id = ?
+        WHERE message_id = ?
         ORDER BY timestamp
     `);
-    return stmt.all(guildId, channelId, messageId) as CanvasHistoryRow[];
+
+    return stmt.all(messageId) as CanvasHistoryRow[];
 }
 
 // Returns colour as 6-char hex string like "ff00aa"
@@ -170,34 +205,27 @@ export function postUserColour(userId: string, hexCode: string): void {
     stmt.run(userId, intValue);
 }
 
-// Returns canvas count as number
+// Get current canvas count
 export function getCanvasCount(): number {
-    const selectStmt = db.prepare(
-        "SELECT hex_code FROM colour WHERE user_id = 'count'",
-    );
-
-    let row = selectStmt.get() as { hex_code: number } | undefined;
+    const stmt = db.prepare("SELECT count FROM canvas_count WHERE id = 0");
+    const row = stmt.get() as { count: number } | undefined;
 
     if (!row) {
-        const insertStmt = db.prepare(
-            "INSERT INTO colour (user_id, hex_code) VALUES ('count', 0)",
-        );
-        insertStmt.run();
+        db.prepare("INSERT INTO canvas_count (id, count) VALUES (0, 0)").run();
         return 0;
     }
 
-    return row.hex_code;
+    return row.count;
 }
 
-// Increments canvas count by 1
+// Increment canvas count
 export function appendCanvasCount(): void {
     const stmt = db.prepare(`
-        INSERT INTO colour (user_id, hex_code)
-        VALUES ('count', 1)
-        ON CONFLICT(user_id)
-        DO UPDATE SET hex_code = hex_code + 1
+        INSERT INTO canvas_count (id, count)
+        VALUES (0, 1)
+        ON CONFLICT(id)
+        DO UPDATE SET count = count + 1
     `);
-
     stmt.run();
 }
 
