@@ -26,6 +26,7 @@
         "typescript": "^5.9.3"
     },
     "dependencies": {
+        "@napi-rs/canvas": "^0.1.94",
         "better-sqlite3": "^12.6.2",
         "discord.js": "^14.25.1"
     }

@@ -1,5 +1,5 @@
 import {
-    ActionRowBuilder,
+    Emoji,
     LabelBuilder,
     MessageFlags,
     ModalBuilder,
@@ -10,11 +10,12 @@ import {
     TextInputBuilder,
     TextInputStyle,
     type APIStringSelectComponent,
-    type TopLevelComponent,
 } from "discord.js";
 import { COLOUR_OPTION } from "../../constants.js";
 import { postUserColour } from "../../database.js";
 import { createColourPickerView } from "./basic.js";
+import { createCanvas } from "@napi-rs/canvas";
+import { application } from "../bot.js";
 
 const colourNameCache = new Map<string, string>();
 
@@ -42,6 +43,91 @@ async function getColourName(hex: string): Promise<string> {
 
         return fallback;
     }
+}
+const MAX_EMOJIS = 2000;
+const EmojiCache = new Map<string, string>();
+
+export async function initEmojiCache() {
+    const emojis = await application.emojis.fetch();
+
+    emojis.forEach((emoji: Emoji) => {
+        if (emoji.name) {
+            EmojiCache.set(emoji.name, emoji.toString());
+        }
+    });
+}
+
+async function getEmoji(hex: string) {
+    if (EmojiCache.has(hex)) {
+        return EmojiCache.get(hex)!;
+    }
+
+    // Ensure space before creating
+    await ensureEmojiCapacity();
+
+    const emojiString = await createEmoji(hex);
+    EmojiCache.set(hex, emojiString);
+
+    return emojiString;
+}
+
+async function ensureEmojiCapacity() {
+    if (EmojiCache.size < MAX_EMOJIS) return;
+
+    const oldestKey = EmojiCache.keys().next().value;
+
+    if (!oldestKey) return;
+
+    const oldestEmojiString = EmojiCache.get(oldestKey);
+
+    if (!oldestEmojiString) return;
+
+    const match = oldestEmojiString.match(/:(\d+)>$/);
+
+    if (!match) return;
+
+    const emojiId = match[1];
+
+    if (!emojiId) return;
+
+    await application.emojis.delete(emojiId);
+
+    EmojiCache.delete(oldestKey);
+}
+
+async function createEmoji(colour: string) {
+    const size = 96;
+    const radius = 12;
+    const canvas = createCanvas(size, size);
+    const ctx = canvas.getContext("2d");
+
+    if (!/^([0-9A-Fa-f]{6})$/.test(colour)) {
+        throw new Error("Colour must be 6-character hex");
+    }
+
+    ctx.fillStyle = `#${colour}`;
+
+    ctx.beginPath();
+    ctx.moveTo(radius, 0);
+    ctx.lineTo(size - radius, 0);
+    ctx.quadraticCurveTo(size, 0, size, radius);
+    ctx.lineTo(size, size - radius);
+    ctx.quadraticCurveTo(size, size, size - radius, size);
+    ctx.lineTo(radius, size);
+    ctx.quadraticCurveTo(0, size, 0, size - radius);
+    ctx.lineTo(0, radius);
+    ctx.quadraticCurveTo(0, 0, radius, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    const buffer = canvas.toBuffer("image/png");
+
+    const emoji = await application.emojis.create({
+        attachment: buffer,
+        name: colour,
+    });
+
+    return emoji.toString();
 }
 
 export async function createColourPicker(
@@ -94,12 +180,12 @@ export async function createColourPicker(
 
     // extra colours (USE API)
     for (const hex of extra_colours) {
-        await addColour(hex);
+        await addColour(hex, await getEmoji(hex));
     }
 
     // inject default if missing
     if (!used.has(defaultClean)) {
-        await addColour(defaultClean);
+        await addColour(defaultClean, await getEmoji(defaultClean));
     }
 
     const MAX_COLOURS = 24; // excluding "custom"
