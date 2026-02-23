@@ -3,6 +3,7 @@ import {
     ChatInputCommandInteraction,
     PermissionFlagsBits,
     MessageFlags,
+    ModalSubmitInteraction,
 } from "discord.js";
 import { createCanvasView, createColourPickerView } from "../ui/basic.js";
 import { createCanvasEmbed } from "../utils.js";
@@ -12,11 +13,18 @@ import {
     appendPixelUpdate,
     getUserColour,
 } from "../../database.js";
+import { createColourModal } from "../ui/meta.js";
 
-const colourChoices = Object.entries(COLOUR_OPTION).map(([name, data]) => ({
-    name: name, // display name in the slash command
-    value: data.hex, // the HEX value as the choice value
-}));
+const colourChoices = [
+    ...Object.entries(COLOUR_OPTION).map(([name, data]) => ({
+        name: name, // display name in the slash command
+        value: data.hex, // HEX value as the choice value
+    })),
+    {
+        name: "Custom Colour",
+        value: "custom", // special value to trigger the modal
+    },
+];
 
 export const data = new SlashCommandBuilder()
     .setName("create")
@@ -48,15 +56,17 @@ export const data = new SlashCommandBuilder()
             ),
     );
 
-export async function execute(interaction: ChatInputCommandInteraction) {
-    // Check bot permission
+export async function execute(
+    interaction: ChatInputCommandInteraction | ModalSubmitInteraction,
+) {
+    if (interaction.isModalSubmit()) {
+        return;
+    }
     if (interaction.inGuild()) {
         const channel = interaction.channel;
-
         if (!channel) return;
 
         const permissions = channel.permissionsFor(interaction.client.user!);
-
         if (
             !permissions?.has([
                 PermissionFlagsBits.ViewChannel,
@@ -66,20 +76,56 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         ) {
             return interaction.reply({
                 content: "I don't have permission to send messages here.",
-                flags: MessageFlags.Ephemeral,
+                flags: MessageFlags.Ephemeral
             });
         }
     }
 
-    const BaseColour = interaction.options.getString("colour") || "ffffff";
+    let BaseColour = interaction.options.getString("colour") || "ffffff";
     const size = interaction.options.getInteger("size") || 5;
 
-    const key = BaseColour.repeat(size ** 2);
+    if (BaseColour === "custom") {
+        // id = random number
+        const id = Math.floor(Math.random() * 1000000);
+        const modal = createColourModal(id);
+        await interaction.showModal(modal);
 
+        try {
+            // Wait for the user to submit the modal
+            const submitted = await interaction.awaitModalSubmit({
+                filter: (i) =>
+                    i.user.id === interaction.user.id &&
+                    i.customId === `cm:${id}`, // ensure it's the correct modal
+                time: 60_000, // wait up to 60 seconds
+            });
+
+            const hexInput = submitted.fields.getTextInputValue("hex_input");
+
+            // Basic hex validation
+            if (!/^([0-9A-Fa-f]{6})$/.test(hexInput)) {
+                await submitted.reply({
+                    content:
+                        "Invalid HEX code. Please enter 6 hexadecimal characters.",
+                    flags: MessageFlags.Ephemeral
+                });
+                return;
+            }
+
+            BaseColour = hexInput.toLowerCase();
+            interaction = submitted;
+        } catch {
+            return interaction.followUp({
+                content: "You did not submit a colour in time.",
+                flags: MessageFlags.Ephemeral
+            });
+        }
+    }
+
+    const key = BaseColour.repeat(size ** 2);
     const embed = createCanvasEmbed(key);
 
     await interaction.reply({
-        content: `<@${interaction.user.id}> has created a canvas.`,
+        content: `${interaction.user} has created a canvas.`,
         embeds: [embed],
         components: createCanvasView(),
         withResponse: true,

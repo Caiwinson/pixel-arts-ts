@@ -1,10 +1,20 @@
 import {
+    ActionRowBuilder,
+    LabelBuilder,
+    MessageFlags,
+    ModalBuilder,
     StringSelectMenuBuilder,
+    StringSelectMenuComponent,
     StringSelectMenuInteraction,
     StringSelectMenuOptionBuilder,
+    TextInputBuilder,
+    TextInputStyle,
+    type APIStringSelectComponent,
+    type TopLevelComponent,
 } from "discord.js";
 import { COLOUR_OPTION } from "../../constants.js";
 import { postUserColour } from "../../database.js";
+import { createColourPickerView } from "./basic.js";
 
 const colourNameCache = new Map<string, string>();
 
@@ -36,7 +46,7 @@ async function getColourName(hex: string): Promise<string> {
 
 export async function createColourPicker(
     defaultHex: string,
-    uiType: string = "basic",
+    uiType: "basic" | "advanced" = "basic",
     extra_colours: string[] = [],
 ) {
     const options: StringSelectMenuOptionBuilder[] = [];
@@ -131,15 +141,111 @@ export async function createColourPicker(
         .setPlaceholder("Select a Colour")
         .addOptions(options);
 }
+function getColourList(
+    component: StringSelectMenuComponent | APIStringSelectComponent,
+): string[] {
+    const options = "options" in component ? component.options : [];
+    const allColours: string[] = [];
+
+    for (const option of options) {
+        const value = option.value?.toLowerCase();
+        if (!value) continue;
+        if (value === "custom") break;
+        allColours.push(value);
+    }
+
+    const presetHexes = Object.values(COLOUR_OPTION).map((c) =>
+        c.hex.toLowerCase(),
+    );
+    const startIndex = allColours.findIndex(
+        (hex) => !presetHexes.includes(hex),
+    );
+    if (startIndex === -1) return [];
+    return allColours.slice(startIndex);
+}
 
 export async function CustomColourExecute(
     interaction: StringSelectMenuInteraction,
 ) {
     const value = interaction.values[0]!;
-    //if not custom
-    if (value !== "custom") {
+    if (value === "custom") {
+        const id = Math.floor(Math.random() * 1000000);
+        const modal = createColourModal(id);
+        await interaction.showModal(modal);
+        const uiTypeRaw = interaction.customId.split(":")[1];
+        const uiType: "basic" | "advanced" =
+            uiTypeRaw === "basic" || uiTypeRaw === "advanced"
+                ? uiTypeRaw
+                : "basic";
+
+        try {
+            const submitted = await interaction.awaitModalSubmit({
+                filter: (i) =>
+                    i.user.id === interaction.user.id &&
+                    i.customId === `cm:${id}`,
+                time: 60_000,
+            });
+
+            const hexInput = submitted.fields.getTextInputValue("hex_input");
+
+            if (!/^([0-9A-Fa-f]{6})$/.test(hexInput)) {
+                await submitted.reply({
+                    content:
+                        "Invalid HEX code. Please enter 6 hexadecimal characters.",
+                    flags: MessageFlags.Ephemeral,
+                });
+                return;
+            }
+            await submitted.deferUpdate();
+
+            const hexColour = hexInput.toLowerCase();
+            postUserColour(interaction.user.id, hexColour);
+
+            const component = interaction.component;
+            const colourList = getColourList(component);
+
+            if (uiType === "basic") {
+                await submitted.message?.edit({
+                    components: [
+                        await createColourPickerView(hexColour, colourList),
+                    ],
+                });
+            }
+        } catch {
+            // Only reply on timeout using the modal submit interaction
+            await interaction.followUp({
+                content: "You did not submit a colour in time.",
+                flags: MessageFlags.Ephemeral,
+            });
+        }
+    } else {
         postUserColour(interaction.user.id, value);
-        // defer
         await interaction.deferUpdate();
     }
+}
+
+export function createColourModal(id: number) {
+    // Create the modal
+    const modal = new ModalBuilder()
+        .setCustomId(`cm:${id}`)
+        .setTitle("Custom Colour");
+
+    // Create the text input
+    const hexInput = new TextInputBuilder()
+        .setCustomId("hex_input")
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder("ffffff")
+        .setRequired(true)
+        .setMinLength(6)
+        .setMaxLength(6);
+
+    // Wrap the text input with a label
+    const hexLabel = new LabelBuilder()
+        .setLabel("HEX code of your Colour")
+        .setTextInputComponent(hexInput);
+
+    // Add the labeled component to the modal
+    modal.addLabelComponents(hexLabel);
+
+    return modal;
 }
