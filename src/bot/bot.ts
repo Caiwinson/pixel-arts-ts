@@ -1,17 +1,21 @@
-import { Client, GatewayIntentBits, Events } from "discord.js";
+import { Client, GatewayIntentBits, Events, ClientApplication } from "discord.js";
 import { DISCORD_TOKEN } from "../constants.js";
 import { refreshCommands } from "./deploy-commands.js";
 
 // Import your interaction handler
 import interactionCreate from "./interactionCreate.js";
+import { initEmojiCache } from "./ui/meta.js";
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds],
 });
+export let application: ClientApplication;
 
 // Ready event
 client.once(Events.ClientReady, (c) => {
-    refreshCommands(c.application.id);
+    application = c.application;
+    refreshCommands();
+    initEmojiCache();
     console.log(`✅ Logged in as ${c.user.tag}`);
 });
 
