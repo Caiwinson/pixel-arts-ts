@@ -1,12 +1,9 @@
-import {
-    ActionRowBuilder,
-    ButtonBuilder,
-    ButtonStyle
-} from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
-import type { ButtonInteraction} from "discord.js";
+import type { ButtonInteraction, StringSelectMenuBuilder } from "discord.js";
 import { createCanvasEmbed } from "../utils.js";
-import { getDb } from "../../database.js";
+import { getUserColour } from "../../database.js";
+import { createColourPicker } from "./meta.js";
 
 // Generate a row of buttons
 function createCanvasRow(
@@ -39,16 +36,25 @@ export function createCanvasView(): ActionRowBuilder<ButtonBuilder>[] {
 }
 
 export async function PixelButtonExecute(interaction: ButtonInteraction) {
-    const key = interaction.message.embeds[0]!.image!.url
-    .replace(".png", "")
-    .slice(-150);
+    const key = interaction.message.embeds[0]!.image!.url.replace(
+        ".png",
+        "",
+    ).slice(-150);
 
     const num = Number(interaction.customId.split(":")[1]) * 6;
-    const colour = getDb(interaction.user.id);
-
+    const colour = getUserColour(interaction.user.id);
 
     // original python snipper: key = key[:num] + colour + key[num + 6:]
     const newKey = key.slice(0, num) + colour + key.slice(num + 6);
     const embed = createCanvasEmbed(newKey);
     await interaction.update({ embeds: [embed] });
+}
+
+export async function createColourPickerView(
+    defaultHex: string,
+    extra_colours: string[] = [],
+): Promise<ActionRowBuilder<StringSelectMenuBuilder>> {
+    const menu = await createColourPicker(defaultHex, extra_colours);
+
+    return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
 }

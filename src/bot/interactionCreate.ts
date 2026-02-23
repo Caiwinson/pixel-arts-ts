@@ -22,6 +22,15 @@ export default {
                         await import("./ui/basic.js");
                     await PixelButtonExecute(interaction);
                 }
+            } else if (interaction.isStringSelectMenu()) {
+                const customId = interaction.customId;
+                const id = customId.split(":")[0];
+
+                if (id === "cc") {
+                    const { CustomColourExecute } =
+                        await import("./ui/meta.js");
+                    await CustomColourExecute(interaction);
+                }
             }
         } catch (error: any) {
             console.error("Interaction error:", error);

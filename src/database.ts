@@ -136,42 +136,29 @@ export function getCanvasHistory(
     return stmt.all(guildId, channelId, messageId) as CanvasHistoryRow[];
 }
 
-/**
- * Gets the user's selected color or a special 'count' value.
- * If the user doesn't exist, they are created with a default value.
- * Equivalent to get_db().
- */
-export const getDb: (userId: string) => string | number = db.transaction(
-    (userId: string) => {
-        const selectStmt = db.prepare(
-            "SELECT hex_code FROM colour WHERE user_id = ?",
+// Returns colour as 6-char hex string like "ff00aa"
+export function getUserColour(userId: string): string {
+    const selectStmt = db.prepare(
+        "SELECT hex_code FROM colour WHERE user_id = ?",
+    );
+
+    let row = selectStmt.get(userId) as { hex_code: number } | undefined;
+
+    if (!row) {
+        const defaultValue = 0;
+        const insertStmt = db.prepare(
+            "INSERT INTO colour (user_id, hex_code) VALUES (?, ?)",
         );
-        let row = selectStmt.get(userId) as { hex_code: number } | undefined;
+        insertStmt.run(userId, defaultValue);
+        row = { hex_code: defaultValue };
+    }
 
-        if (!row) {
-            const defaultValue = 0;
-            const insertStmt = db.prepare(
-                "INSERT OR IGNORE INTO colour (user_id, hex_code) VALUES (?, ?)",
-            );
-            insertStmt.run(userId, defaultValue);
-            row = selectStmt.get(userId) as { hex_code: number };
-        }
+    return row.hex_code.toString(16).padStart(6, "0");
+}
 
-        if (userId === "count") {
-            return row.hex_code;
-        } else {
-            return row.hex_code.toString(16).padStart(6, "0");
-        }
-    },
-);
-
-/**
- * Posts/updates a user's color or the special 'count' value.
- * Equivalent to post_db().
- */
-export function postDb(userId: string, hexCode: string | number): void {
-    const intValue =
-        userId === "count" ? Number(hexCode) : parseInt(hexCode as string, 16);
+// Updates user colour using hex string like "ff00aa"
+export function postUserColour(userId: string, hexCode: string): void {
+    const intValue = parseInt(hexCode, 16);
 
     const stmt = db.prepare(`
         INSERT INTO colour (user_id, hex_code)
@@ -179,7 +166,39 @@ export function postDb(userId: string, hexCode: string | number): void {
         ON CONFLICT(user_id)
         DO UPDATE SET hex_code = excluded.hex_code
     `);
+
     stmt.run(userId, intValue);
+}
+
+// Returns canvas count as number
+export function getCanvasCount(): number {
+    const selectStmt = db.prepare(
+        "SELECT hex_code FROM colour WHERE user_id = 'count'",
+    );
+
+    let row = selectStmt.get() as { hex_code: number } | undefined;
+
+    if (!row) {
+        const insertStmt = db.prepare(
+            "INSERT INTO colour (user_id, hex_code) VALUES ('count', 0)",
+        );
+        insertStmt.run();
+        return 0;
+    }
+
+    return row.hex_code;
+}
+
+// Increments canvas count by 1
+export function appendCanvasCount(): void {
+    const stmt = db.prepare(`
+        INSERT INTO colour (user_id, hex_code)
+        VALUES ('count', 1)
+        ON CONFLICT(user_id)
+        DO UPDATE SET hex_code = hex_code + 1
+    `);
+
+    stmt.run();
 }
 
 /**

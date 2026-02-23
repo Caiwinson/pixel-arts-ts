@@ -1,7 +1,13 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, MessageFlags } from "discord.js";
-import { createCanvasView } from "../ui/basic.js";
+import {
+    SlashCommandBuilder,
+    ChatInputCommandInteraction,
+    PermissionFlagsBits,
+    MessageFlags,
+} from "discord.js";
+import { createCanvasView, createColourPickerView } from "../ui/basic.js";
 import { createCanvasEmbed } from "../utils.js";
 import { COLOUR_OPTION } from "../../constants.js";
+import { getUserColour } from "../../database.js";
 
 const colourChoices = Object.entries(COLOUR_OPTION).map(([name, data]) => ({
     name: name, // display name in the slash command
@@ -39,27 +45,26 @@ export const data = new SlashCommandBuilder()
     );
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-
     // Check bot permission
     if (interaction.inGuild()) {
-
         const channel = interaction.channel;
 
         if (!channel) return;
 
         const permissions = channel.permissionsFor(interaction.client.user!);
 
-        if (!permissions?.has([
-            PermissionFlagsBits.ViewChannel,
-            PermissionFlagsBits.SendMessages,
-            PermissionFlagsBits.EmbedLinks,
-        ])) {
+        if (
+            !permissions?.has([
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.EmbedLinks,
+            ])
+        ) {
             return interaction.reply({
                 content: "I don't have permission to send messages here.",
-                flags: MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral,
             });
         }
-
     }
 
     const BaseColour = interaction.options.getString("colour") || "ffffff";
@@ -73,6 +78,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         content: `<@${interaction.user.id}> has created a canvas.`,
         embeds: [embed],
         components: createCanvasView(),
+        withResponse: true,
     });
 
+    const message = await interaction.fetchReply();
+
+    await message.reply({
+        content: "Pick a colour!",
+        components: [
+            await createColourPickerView(getUserColour(interaction.user.id)),
+        ],
+    });
 }
