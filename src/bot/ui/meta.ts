@@ -263,6 +263,7 @@ export async function CustomColourExecute(
             uiTypeRaw === "basic" || uiTypeRaw === "advanced"
                 ? uiTypeRaw
                 : "basic";
+        let hasSubmitted = false;
 
         try {
             const submitted = await interaction.awaitModalSubmit({
@@ -271,6 +272,7 @@ export async function CustomColourExecute(
                     i.customId === `cm:${id}`,
                 time: 60_000,
             });
+            hasSubmitted = true;
 
             const hexInput = submitted.fields.getTextInputValue("hex_input");
 
@@ -299,10 +301,12 @@ export async function CustomColourExecute(
             }
         } catch {
             // Only reply on timeout using the modal submit interaction
-            await interaction.followUp({
-                content: "You did not submit a colour in time.",
-                flags: MessageFlags.Ephemeral,
-            });
+            if (hasSubmitted) {
+                await interaction.followUp({
+                    content: "You did not submit a colour in time.",
+                    flags: MessageFlags.Ephemeral,
+                });
+            }
         }
     } else {
         postUserColour(interaction.user.id, value);

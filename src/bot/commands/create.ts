@@ -76,7 +76,7 @@ export async function execute(
         ) {
             return interaction.reply({
                 content: "I don't have permission to send messages here.",
-                flags: MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral,
             });
         }
     }
@@ -89,6 +89,7 @@ export async function execute(
         const id = Math.floor(Math.random() * 1000000);
         const modal = createColourModal(id);
         await interaction.showModal(modal);
+        let hasSubmitted = false;
 
         try {
             // Wait for the user to submit the modal
@@ -98,6 +99,7 @@ export async function execute(
                     i.customId === `cm:${id}`, // ensure it's the correct modal
                 time: 60_000, // wait up to 60 seconds
             });
+            hasSubmitted = true;
 
             const hexInput = submitted.fields.getTextInputValue("hex_input");
 
@@ -106,7 +108,7 @@ export async function execute(
                 await submitted.reply({
                     content:
                         "Invalid HEX code. Please enter 6 hexadecimal characters.",
-                    flags: MessageFlags.Ephemeral
+                    flags: MessageFlags.Ephemeral,
                 });
                 return;
             }
@@ -114,10 +116,12 @@ export async function execute(
             BaseColour = hexInput.toLowerCase();
             interaction = submitted;
         } catch {
-            return interaction.followUp({
-                content: "You did not submit a colour in time.",
-                flags: MessageFlags.Ephemeral
-            });
+            if (hasSubmitted) {
+                return interaction.followUp({
+                    content: "You did not submit a colour in time.",
+                    flags: MessageFlags.Ephemeral,
+                });
+            }
         }
     }
 
