@@ -144,6 +144,6 @@ export async function execute(
         ],
     });
 
-    appendPixelUpdate(message.id, null, key, interaction.user.id);
+    appendPixelUpdate(message.id, key, null, interaction.user.id);
     appendCanvasCount();
 }

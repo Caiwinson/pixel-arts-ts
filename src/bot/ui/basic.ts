@@ -2,7 +2,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 import type { ButtonInteraction, StringSelectMenuBuilder } from "discord.js";
 import { createCanvasEmbed } from "../utils.js";
-import { getUserColour } from "../../database.js";
+import { appendPixelUpdate, getUserColour } from "../../database.js";
 import { createColourPicker } from "./meta.js";
 
 // Generate a row of buttons
@@ -41,13 +41,18 @@ export async function PixelButtonExecute(interaction: ButtonInteraction) {
         "",
     ).slice(-150);
 
-    const num = Number(interaction.customId.split(":")[1]) * 6;
+    const num = Number(interaction.customId.split(":")[1]);
     const colour = getUserColour(interaction.user.id);
 
-    // original python snipper: key = key[:num] + colour + key[num + 6:]
-    const newKey = key.slice(0, num) + colour + key.slice(num + 6);
+    const newKey = key.slice(0, num * 6) + colour + key.slice(num * 6 + 6);
     const embed = createCanvasEmbed(newKey);
     await interaction.update({ embeds: [embed] });
+    appendPixelUpdate(
+        interaction.message.id,
+        newKey,
+        `${num}:${colour}`,
+        interaction.user.id,
+    );
 }
 
 export async function createColourPickerView(

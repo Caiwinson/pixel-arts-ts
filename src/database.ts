@@ -31,7 +31,7 @@ function initDb() {
     const schema = `
         CREATE TABLE IF NOT EXISTS timelapse (
 
-            message_id TEXT PRIMARY KEY,
+            message_id TEXT,
             key TEXT,
             user_id TEXT,
             timestamp INTEGER,
@@ -70,6 +70,87 @@ function initDb() {
 // Run initialization on module load
 initDb();
 
+// --- Prepared Statements (prepare once, reuse forever) ---
+
+// timelapse
+const insertTimelapseStmt = db.prepare(`
+    INSERT INTO timelapse (
+        message_id,
+        key,
+        user_id,
+        timestamp,
+        readable_time
+    ) VALUES (?, ?, ?, ?, ?)
+`);
+
+const selectTimelapseExistsStmt = db.prepare(`
+    SELECT 1 FROM timelapse
+    WHERE message_id = ?
+    LIMIT 1
+`);
+
+const selectRecentKeysStmt = db.prepare(`
+    SELECT key FROM timelapse
+    WHERE message_id = ?
+    ORDER BY timestamp DESC
+    LIMIT 10
+`);
+
+const selectCanvasHistoryStmt = db.prepare(`
+    SELECT key, user_id, timestamp, readable_time
+    FROM timelapse
+    WHERE message_id = ?
+    ORDER BY timestamp
+`);
+
+// colour
+const selectUserColourStmt = db.prepare(`
+    SELECT hex_code FROM colour WHERE user_id = ?
+`);
+
+const insertUserColourStmt = db.prepare(`
+    INSERT INTO colour (user_id, hex_code)
+    VALUES (?, ?)
+`);
+
+const upsertUserColourStmt = db.prepare(`
+    INSERT INTO colour (user_id, hex_code)
+    VALUES (?, ?)
+    ON CONFLICT(user_id)
+    DO UPDATE SET hex_code = excluded.hex_code
+`);
+
+// canvas_count
+const selectCanvasCountStmt = db.prepare(`
+    SELECT count FROM canvas_count WHERE id = 0
+`);
+
+const insertCanvasCountStmt = db.prepare(`
+    INSERT INTO canvas_count (id, count) VALUES (0, 0)
+`);
+
+const incrementCanvasCountStmt = db.prepare(`
+    INSERT INTO canvas_count (id, count)
+    VALUES (0, 1)
+    ON CONFLICT(id)
+    DO UPDATE SET count = count + 1
+`);
+
+// image_hash
+const insertImageHashStmt = db.prepare(`
+    INSERT OR IGNORE INTO image_hash (hash, key)
+    VALUES (?, ?)
+`);
+
+const selectImageHashStmt = db.prepare(`
+    SELECT key FROM image_hash WHERE hash = ?
+`);
+
+// vote
+const selectVoteStmt = db.prepare(`
+    SELECT timestamp FROM vote WHERE user_id = ?
+`);
+
 // --- Ensure proper shutdown ---
 process.on("exit", () => {
     db.close();
@@ -101,59 +182,65 @@ export interface CanvasHistoryRow {
 
 /**
  * Appends a pixel update event to the timelapse log.
- * Equivalent to append_pixel_update().
  */
-export function appendPixelUpdate(
+
+function _appendPixelUpdate(
     messageId: string,
-    dkey: string | null | undefined,
-    fkey: string,
+    keyToStore: string,
     userId: string,
-): void {
-    const ts = Math.floor(Date.now() / 1000);
+    ts: number,
+    readable: string,
+) {
+    insertTimelapseStmt.run(messageId, keyToStore, userId, ts, readable);
+}
 
-    const readable = new Date(ts * 1000)
-        .toISOString()
-        .replace("T", " ")
-        .substring(0, 19);
+const appendPixelUpdateTx = db.transaction(
+    (
+        messageId: string,
+        fkey: string,
+        dkey: string | null | undefined,
+        userId: string,
+    ) => {
+        const ts = Math.floor(Date.now() / 1000);
 
-    let keyToStore: string;
+        const readable = new Date(ts * 1000)
+            .toISOString()
+            .replace("T", " ")
+            .substring(0, 19);
 
-    if (!dkey) {
-        keyToStore = fkey;
-    } else {
-        const countStmt = db.prepare(`
-            SELECT key FROM timelapse
-            WHERE message_id = ?
-            ORDER BY timestamp DESC
-            LIMIT 10
-        `);
+        let keyToStore: string;
 
-        const rows = countStmt.all(messageId) as { key: string }[];
+        const exists = selectTimelapseExistsStmt.get(messageId);
 
-        let deltaCount = 0;
+        if (!exists) {
+            keyToStore = fkey;
+        } else if (!dkey) {
+            keyToStore = fkey;
+        } else {
+            const rows = selectRecentKeysStmt.all(messageId) as {
+                key: string;
+            }[];
 
-        for (const row of rows) {
-            if (row.key.includes(":")) {
-                deltaCount++;
-            } else {
-                break;
+            let deltaCount = 0;
+
+            for (const row of rows) {
+                if (row.key.includes(":")) deltaCount++;
+                else break;
             }
+
+            keyToStore = deltaCount >= 10 ? fkey : dkey;
         }
 
-        keyToStore = deltaCount >= 10 ? fkey : dkey;
-    }
-
-    const stmt = db.prepare(`
-        INSERT INTO timelapse (
-            message_id,
-            key,
-            user_id,
-            timestamp,
-            readable_time
-        ) VALUES (?, ?, ?, ?, ?)
-    `);
-
-    stmt.run(messageId, keyToStore, userId, ts, readable);
+        _appendPixelUpdate(messageId, keyToStore, userId, ts, readable);
+    },
+);
+export function appendPixelUpdate(
+    messageId: string,
+    fkey: string,
+    dkey: string | null | undefined,
+    userId: string,
+) {
+    appendPixelUpdateTx(messageId, fkey, dkey, userId);
 }
 
 /**
@@ -161,30 +248,18 @@ export function appendPixelUpdate(
  * Equivalent to get_canvas_history().
  */
 export function getCanvasHistory(messageId: string): CanvasHistoryRow[] {
-    const stmt = db.prepare(`
-        SELECT key, user_id, timestamp, readable_time
-        FROM timelapse
-        WHERE message_id = ?
-        ORDER BY timestamp
-    `);
-
-    return stmt.all(messageId) as CanvasHistoryRow[];
+    return selectCanvasHistoryStmt.all(messageId) as CanvasHistoryRow[];
 }
 
 // Returns colour as 6-char hex string like "ff00aa"
 export function getUserColour(userId: string): string {
-    const selectStmt = db.prepare(
-        "SELECT hex_code FROM colour WHERE user_id = ?",
-    );
-
-    let row = selectStmt.get(userId) as { hex_code: number } | undefined;
+    let row = selectUserColourStmt.get(userId) as
+        | { hex_code: number }
+        | undefined;
 
     if (!row) {
         const defaultValue = 0;
-        const insertStmt = db.prepare(
-            "INSERT INTO colour (user_id, hex_code) VALUES (?, ?)",
-        );
-        insertStmt.run(userId, defaultValue);
+        insertUserColourStmt.run(userId, defaultValue);
         row = { hex_code: defaultValue };
     }
 
@@ -195,23 +270,15 @@ export function getUserColour(userId: string): string {
 export function postUserColour(userId: string, hexCode: string): void {
     const intValue = parseInt(hexCode, 16);
 
-    const stmt = db.prepare(`
-        INSERT INTO colour (user_id, hex_code)
-        VALUES (?, ?)
-        ON CONFLICT(user_id)
-        DO UPDATE SET hex_code = excluded.hex_code
-    `);
-
-    stmt.run(userId, intValue);
+    upsertUserColourStmt.run(userId, intValue);
 }
 
 // Get current canvas count
 export function getCanvasCount(): number {
-    const stmt = db.prepare("SELECT count FROM canvas_count WHERE id = 0");
-    const row = stmt.get() as { count: number } | undefined;
+    const row = selectCanvasCountStmt.get() as { count: number } | undefined;
 
     if (!row) {
-        db.prepare("INSERT INTO canvas_count (id, count) VALUES (0, 0)").run();
+        insertCanvasCountStmt.run();
         return 0;
     }
 
@@ -220,13 +287,7 @@ export function getCanvasCount(): number {
 
 // Increment canvas count
 export function appendCanvasCount(): void {
-    const stmt = db.prepare(`
-        INSERT INTO canvas_count (id, count)
-        VALUES (0, 1)
-        ON CONFLICT(id)
-        DO UPDATE SET count = count + 1
-    `);
-    stmt.run();
+    incrementCanvasCountStmt.run();
 }
 
 /**
@@ -237,11 +298,7 @@ export function postImageHash(key: string, size: number): string {
     const combinedKey = `${size}-${key}`;
     const hash = crypto.createHash("sha256").update(combinedKey).digest("hex");
 
-    const stmt = db.prepare(`
-        INSERT OR IGNORE INTO image_hash (hash, key)
-        VALUES (?, ?)
-    `);
-    stmt.run(hash, combinedKey);
+    insertImageHashStmt.run(hash, combinedKey);
 
     return hash;
 }
@@ -251,8 +308,7 @@ export function postImageHash(key: string, size: number): string {
  * Equivalent to get_image_hash().
  */
 export function getImageHash(hash: string): [number, string] | null {
-    const stmt = db.prepare("SELECT key FROM image_hash WHERE hash = ?");
-    const row = stmt.get(hash) as { key: string } | undefined;
+    const row = selectImageHashStmt.get(hash) as { key: string } | undefined;
 
     if (!row || !row.key) {
         return null;
@@ -273,8 +329,7 @@ export function getImageHash(hash: string): [number, string] | null {
  * Equivalent to has_voted_db().
  */
 export function hasVotedDb(userId: string): boolean {
-    const stmt = db.prepare("SELECT timestamp FROM vote WHERE user_id = ?");
-    const row = stmt.get(userId) as { timestamp: number } | undefined;
+    const row = selectVoteStmt.get(userId) as { timestamp: number } | undefined;
 
     if (!row) {
         return false;
