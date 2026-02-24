@@ -343,8 +343,42 @@ export function createColourModal(id: number) {
     return modal;
 }
 
+const RATE_LIMIT = 3;
+const RATE_WINDOW = 60 * 1000; // 1 minute in ms
+
+// userId -> timestamps
+const undoRateLimit = new Map<string, number[]>();
+
+function isRateLimited(userId: string): boolean {
+    const now = Date.now();
+
+    const timestamps = undoRateLimit.get(userId) || [];
+
+    // keep only timestamps inside window
+    const valid = timestamps.filter((ts) => now - ts < RATE_WINDOW);
+
+    if (valid.length >= RATE_LIMIT) {
+        undoRateLimit.set(userId, valid);
+        return true;
+    }
+
+    valid.push(now);
+    undoRateLimit.set(userId, valid);
+
+    return false;
+}
+
 export async function undoCanvasExecute(interaction: ButtonInteraction) {
     const mode = interaction.customId.split(":")[1];
+    // RATE LIMIT CHECK
+    if (isRateLimited(interaction.user.id)) {
+        await interaction.reply({
+            content:
+                "Rate limit exceeded. You can only undo 3 times per minute.",
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
 
     if (mode === "basic") {
         const message = await interaction.message.fetchReference();
@@ -353,6 +387,14 @@ export async function undoCanvasExecute(interaction: ButtonInteraction) {
             await interaction.reply({
                 content:
                     "No canvas found. It may have been deleted or is no longer available.",
+                flags: MessageFlags.Ephemeral,
+            });
+            return;
+        }
+
+        if (message.interactionMetadata?.user.id !== interaction.user.id) {
+            await interaction.reply({
+                content: "You cannot undo this action.",
                 flags: MessageFlags.Ephemeral,
             });
             return;
@@ -367,8 +409,11 @@ export async function undoCanvasExecute(interaction: ButtonInteraction) {
             });
             return;
         }
+
         await interaction.deferUpdate();
+
         const embed = createCanvasEmbed(key);
+
         await message.edit({ embeds: [embed] });
     }
 }
