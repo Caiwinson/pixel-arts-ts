@@ -1,7 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 import type { ButtonInteraction, StringSelectMenuBuilder } from "discord.js";
-import { createCanvasEmbed } from "../utils.js";
+import { createCanvasEmbed, getCanvasKey } from "../utils.js";
 import { appendPixelUpdate, getUserColour } from "../../database.js";
 import { createColourPicker } from "./meta.js";
 
@@ -36,10 +36,8 @@ export function createCanvasView(): ActionRowBuilder<ButtonBuilder>[] {
 }
 
 export async function PixelButtonExecute(interaction: ButtonInteraction) {
-    const key = interaction.message.embeds[0]!.image!.url.replace(
-        ".png",
-        "",
-    ).slice(-150);
+    const url = interaction.message.embeds?.[0]?.image?.url;
+    const key = getCanvasKey(url!);
 
     const num = Number(interaction.customId.split(":")[1]);
     const colour = getUserColour(interaction.user.id);
@@ -58,8 +56,31 @@ export async function PixelButtonExecute(interaction: ButtonInteraction) {
 export async function createColourPickerView(
     defaultHex: string,
     extra_colours: string[] = [],
-): Promise<ActionRowBuilder<StringSelectMenuBuilder>> {
+): Promise<
+    [
+        ActionRowBuilder<StringSelectMenuBuilder>,
+        ActionRowBuilder<ButtonBuilder>
+    ]
+> {
     const menu = await createColourPicker(defaultHex, "basic", extra_colours);
 
-    return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
+    const selectRow =
+        new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
+
+    const buttonRow =
+        new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+                .setCustomId("cl:basic")
+                .setLabel("Close")
+                .setEmoji("❌")
+                .setStyle(ButtonStyle.Danger),
+
+            new ButtonBuilder()
+                .setCustomId("ud:basic")
+                .setLabel("Undo")
+                .setEmoji("↩️")
+                .setStyle(ButtonStyle.Secondary),
+        );
+
+    return [selectRow, buttonRow];
 }

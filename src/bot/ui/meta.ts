@@ -1,4 +1,5 @@
 import {
+    ButtonInteraction,
     Emoji,
     LabelBuilder,
     MessageFlags,
@@ -12,10 +13,11 @@ import {
     type APIStringSelectComponent,
 } from "discord.js";
 import { COLOUR_OPTION } from "../../constants.js";
-import { postUserColour } from "../../database.js";
+import { postUserColour, undoPixelUpdate } from "../../database.js";
 import { createColourPickerView } from "./basic.js";
 import { createCanvas } from "@napi-rs/canvas";
 import { application } from "../bot.js";
+import { createCanvasEmbed } from "../utils.js";
 
 const colourNameCache = new Map<string, string>();
 
@@ -294,9 +296,10 @@ export async function CustomColourExecute(
 
             if (uiType === "basic") {
                 await submitted.message?.edit({
-                    components: [
-                        await createColourPickerView(hexColour, colourList),
-                    ],
+                    components: await createColourPickerView(
+                        hexColour,
+                        colourList,
+                    ),
                 });
             }
         } catch {
@@ -338,4 +341,34 @@ export function createColourModal(id: number) {
     modal.addLabelComponents(hexLabel);
 
     return modal;
+}
+
+export async function undoCanvasExecute(interaction: ButtonInteraction) {
+    const mode = interaction.customId.split(":")[1];
+
+    if (mode === "basic") {
+        const message = await interaction.message.fetchReference();
+
+        if (!message) {
+            await interaction.reply({
+                content:
+                    "No canvas found. It may have been deleted or is no longer available.",
+                flags: MessageFlags.Ephemeral,
+            });
+            return;
+        }
+
+        const key = undoPixelUpdate(message.id);
+
+        if (!key) {
+            await interaction.reply({
+                content: "No changes to undo.",
+                flags: MessageFlags.Ephemeral,
+            });
+            return;
+        }
+        await interaction.deferUpdate();
+        const embed = createCanvasEmbed(key);
+        await message.edit({ embeds: [embed] });
+    }
 }

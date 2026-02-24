@@ -56,7 +56,7 @@ export const data = new SlashCommandBuilder()
             ),
     );
 
-export async function execute(
+export async function createCommandExecute(
     interaction: ChatInputCommandInteraction | ModalSubmitInteraction,
 ) {
     if (interaction.isModalSubmit()) {
@@ -139,9 +139,9 @@ export async function execute(
 
     await message.reply({
         content: "Pick a colour!",
-        components: [
-            await createColourPickerView(getUserColour(interaction.user.id)),
-        ],
+        components: await createColourPickerView(
+            getUserColour(interaction.user.id),
+        ),
     });
 
     appendPixelUpdate(message.id, key, null, interaction.user.id);

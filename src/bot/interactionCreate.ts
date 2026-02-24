@@ -10,7 +10,8 @@ export default {
                     interaction.commandName === "create" &&
                     interaction.options.getSubcommand() === "canvas"
                 ) {
-                    const { execute } = await import("./commands/create.js");
+                    const { createCommandExecute: execute } =
+                        await import("./commands/create.js");
                     await execute(interaction);
                 }
             } else if (interaction.isButton()) {
@@ -21,6 +22,9 @@ export default {
                     const { PixelButtonExecute } =
                         await import("./ui/basic.js");
                     await PixelButtonExecute(interaction);
+                } else if (id === "ud") {
+                    const { undoCanvasExecute } = await import("./ui/meta.js");
+                    await undoCanvasExecute(interaction);
                 }
             } else if (interaction.isStringSelectMenu()) {
                 const customId = interaction.customId;

@@ -17,3 +17,7 @@ export function createCanvasEmbed(key: string, showPlot = false): EmbedBuilder {
 
     return embed;
 }
+
+export function getCanvasKey(url: string): string {
+    return url.split("/").pop()?.split(".")[0]!;
+}
