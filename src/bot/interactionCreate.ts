@@ -1,62 +1,70 @@
-import { Events } from "discord.js";
-import type { Interaction } from "discord.js";
+import { Events, type Interaction, type ChatInputCommandInteraction, type ButtonInteraction, type StringSelectMenuInteraction } from "discord.js";
+
+import { createCommandExecute } from "./commands/create.js";
+import { pixelButtonExecute } from "./ui/basic.js";
+import { closeExecute, undoCanvasExecute } from "./ui/meta.js";
+import { customColourExecute } from "./ui/colour.js";
+
+// Dispatch maps
+const buttonHandlers: Record<string, (i: ButtonInteraction) => Promise<void>> = {
+    pb: pixelButtonExecute as (i: ButtonInteraction) => Promise<void>,
+    cl: closeExecute as (i: ButtonInteraction) => Promise<void>,
+    ud: undoCanvasExecute as (i: ButtonInteraction) => Promise<void>,
+};
+
+const selectHandlers: Record<string, (i: StringSelectMenuInteraction) => Promise<void>> = {
+    cc: customColourExecute as (i: StringSelectMenuInteraction) => Promise<void>,
+};
+
+const commandHandlers: Record<string, (i: ChatInputCommandInteraction) => Promise<void>> = {
+    "create": createCommandExecute as (i: ChatInputCommandInteraction) => Promise<void>,
+};
 
 export default {
     name: Events.InteractionCreate,
+
     async execute(interaction: Interaction) {
         try {
+            // Chat input commands
             if (interaction.isChatInputCommand()) {
-                if (
-                    interaction.commandName === "create" &&
-                    interaction.options.getSubcommand() === "canvas"
-                ) {
-                    const { createCommandExecute } =
-                        await import("./commands/create.js");
-                    await createCommandExecute(interaction);
-                }
-            } else if (interaction.isButton()) {
-                const customId = interaction.customId;
-                const id = customId.split(":")[0];
-
-                if (id === "pb") {
-                    const { pixelButtonExecute: PixelButtonExecute } =
-                        await import("./ui/basic.js");
-                    await PixelButtonExecute(interaction);
-                } else if (id === "ud") {
-                    const { undoCanvasExecute } = await import("./ui/meta.js");
-                    await undoCanvasExecute(interaction);
-                }
-            } else if (interaction.isStringSelectMenu()) {
-                const customId = interaction.customId;
-                const id = customId.split(":")[0];
-
-                if (id === "cc") {
-                    const { customColourExecute } =
-                        await import("./ui/colour.js");
-                    await customColourExecute(interaction);
-                }
+                const key = interaction.commandName;
+                const handler = commandHandlers[key];
+                if (handler) await handler(interaction);
+                return;
             }
+
+            // Buttons
+            if (interaction.isButton()) {
+                const id = interaction.customId.split(":")[0]!;
+                const handler = buttonHandlers[id];
+                if (handler) await handler(interaction);
+                return;
+            }
+
+            // Select menus
+            if (interaction.isStringSelectMenu()) {
+                const id = interaction.customId.split(":")[0]!;
+                const handler = selectHandlers[id];
+                if (handler) await handler(interaction);
+                return;
+            }
+
         } catch (error: any) {
             console.error("Interaction error:", error);
 
-            if (error.code === 10062) return; // Unknown interaction
+            if (error.code === 10062) return;
 
-            if (interaction.isRepliable()) {
-                if (interaction.replied || interaction.deferred) {
-                    await interaction
-                        .followUp({
-                            content: "Something went wrong.",
-                            ephemeral: true,
-                        })
-                        .catch(() => {});
-                } else {
-                    await interaction
-                        .reply({
-                            content: "Something went wrong.",
-                            ephemeral: true,
-                        })
-                        .catch(() => {});
-                }
+            if (!interaction.isRepliable()) return;
+
+            const reply = {
+                content: "Something went wrong.",
+                ephemeral: true,
+            };
+
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(reply).catch(() => {});
+            } else {
+                await interaction.reply(reply).catch(() => {});
             }
         }
     },
