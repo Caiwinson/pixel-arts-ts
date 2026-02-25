@@ -37,14 +37,20 @@ export async function closeExecute(interaction: ButtonInteraction) {
     const mode = interaction.customId.split(":")[1];
 
     if (mode === "basic") {
-        const message = await interaction.message.fetchReference();
+        let message;
 
-        if (!message) {
+        try {
+            message = await interaction.channel?.messages.fetch({
+                message: interaction.message.reference?.messageId!,
+                force: true,
+            })!;
+        } catch (error) {
             await interaction.reply({
                 content:
                     "No canvas found. It may have been deleted or is no longer available.",
                 flags: MessageFlags.Ephemeral,
             });
+
             return;
         }
 
@@ -128,14 +134,20 @@ export async function undoCanvasExecute(interaction: ButtonInteraction) {
     }
 
     if (mode === "basic") {
-        const message = await interaction.message.fetchReference();
+        let message;
 
-        if (!message) {
+        try {
+            message = await interaction.channel?.messages.fetch({
+                message: interaction.message.reference?.messageId!,
+                force: true,
+            })!;
+        } catch (error) {
             await interaction.reply({
                 content:
                     "No canvas found. It may have been deleted or is no longer available.",
                 flags: MessageFlags.Ephemeral,
             });
+
             return;
         }
 
