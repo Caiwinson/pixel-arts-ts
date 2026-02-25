@@ -19,7 +19,7 @@ export default {
                 const id = customId.split(":")[0];
 
                 if (id === "pb") {
-                    const { PixelButtonExecute } =
+                    const { pixelButtonExecute: PixelButtonExecute } =
                         await import("./ui/basic.js");
                     await PixelButtonExecute(interaction);
                 } else if (id === "ud") {
@@ -31,7 +31,7 @@ export default {
                 const id = customId.split(":")[0];
 
                 if (id === "cc") {
-                    const { CustomColourExecute } =
+                    const { customColourExecute: CustomColourExecute } =
                         await import("./ui/meta.js");
                     await CustomColourExecute(interaction);
                 }

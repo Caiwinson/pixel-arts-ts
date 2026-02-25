@@ -26,7 +26,7 @@ const colourChoices = [
     },
 ];
 
-export const data = new SlashCommandBuilder()
+export const createCommandData = new SlashCommandBuilder()
     .setName("create")
     .setDescription("Create something")
     .addSubcommand((sub) =>

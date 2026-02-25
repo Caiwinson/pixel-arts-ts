@@ -1,5 +1,5 @@
 import { REST, Routes } from "discord.js";
-import { data as createCommand } from "./commands/create.js";
+import { createCommandData as createCommand } from "./commands/create.js";
 import { DISCORD_TOKEN } from "../constants.js";
 import { application } from "./bot.js";
 

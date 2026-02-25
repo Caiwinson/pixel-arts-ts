@@ -252,7 +252,7 @@ function getColourList(
     return allColours.slice(startIndex);
 }
 
-export async function CustomColourExecute(
+export async function customColourExecute(
     interaction: StringSelectMenuInteraction,
 ) {
     const value = interaction.values[0]!;

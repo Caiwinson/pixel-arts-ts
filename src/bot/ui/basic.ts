@@ -35,7 +35,7 @@ export function createCanvasView(): ActionRowBuilder<ButtonBuilder>[] {
     return rows;
 }
 
-export async function PixelButtonExecute(interaction: ButtonInteraction) {
+export async function pixelButtonExecute(interaction: ButtonInteraction) {
     const url = interaction.message.embeds?.[0]?.image?.url;
     const key = getCanvasKey(url!);
 
@@ -57,30 +57,26 @@ export async function createColourPickerView(
     defaultHex: string,
     extra_colours: string[] = [],
 ): Promise<
-    [
-        ActionRowBuilder<StringSelectMenuBuilder>,
-        ActionRowBuilder<ButtonBuilder>
-    ]
+    [ActionRowBuilder<StringSelectMenuBuilder>, ActionRowBuilder<ButtonBuilder>]
 > {
     const menu = await createColourPicker(defaultHex, "basic", extra_colours);
 
     const selectRow =
         new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);
 
-    const buttonRow =
-        new ActionRowBuilder<ButtonBuilder>().addComponents(
-            new ButtonBuilder()
-                .setCustomId("cl:basic")
-                .setLabel("Close")
-                .setEmoji("❌")
-                .setStyle(ButtonStyle.Danger),
+    const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId("cl:basic")
+            .setLabel("Close")
+            .setEmoji("❌")
+            .setStyle(ButtonStyle.Danger),
 
-            new ButtonBuilder()
-                .setCustomId("ud:basic")
-                .setLabel("Undo")
-                .setEmoji("↩️")
-                .setStyle(ButtonStyle.Secondary),
-        );
+        new ButtonBuilder()
+            .setCustomId("ud:basic")
+            .setLabel("Undo")
+            .setEmoji("↩️")
+            .setStyle(ButtonStyle.Secondary),
+    );
 
     return [selectRow, buttonRow];
 }
