@@ -3,7 +3,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import type { ButtonInteraction, StringSelectMenuBuilder } from "discord.js";
 import { createCanvasEmbed, getCanvasKey } from "../utils.js";
 import { appendPixelUpdate, getUserColour } from "../../database.js";
-import { createColourPicker } from "./meta.js";
+import { createColourPicker } from "./colour.js";
 
 // Generate a row of buttons
 function createCanvasRow(

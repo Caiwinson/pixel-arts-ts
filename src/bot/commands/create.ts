@@ -13,7 +13,7 @@ import {
     appendPixelUpdate,
     getUserColour,
 } from "../../database.js";
-import { createColourModal } from "../ui/meta.js";
+import { createColourModal } from "../ui/colour.js";
 
 const colourChoices = [
     ...Object.entries(COLOUR_OPTION).map(([name, data]) => ({

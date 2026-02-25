@@ -1,10 +1,15 @@
-import { Client, GatewayIntentBits, Events, ClientApplication } from "discord.js";
+import {
+    Client,
+    GatewayIntentBits,
+    Events,
+    ClientApplication,
+} from "discord.js";
 import { DISCORD_TOKEN } from "../constants.js";
 import { refreshCommands } from "./deploy-commands.js";
 
 // Import your interaction handler
 import interactionCreate from "./interactionCreate.js";
-import { initEmojiCache } from "./ui/meta.js";
+import { initEmojiCache } from "./ui/colour.js";
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds],

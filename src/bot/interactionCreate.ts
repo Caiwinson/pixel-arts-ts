@@ -10,9 +10,9 @@ export default {
                     interaction.commandName === "create" &&
                     interaction.options.getSubcommand() === "canvas"
                 ) {
-                    const { createCommandExecute: execute } =
+                    const { createCommandExecute } =
                         await import("./commands/create.js");
-                    await execute(interaction);
+                    await createCommandExecute(interaction);
                 }
             } else if (interaction.isButton()) {
                 const customId = interaction.customId;
@@ -31,9 +31,9 @@ export default {
                 const id = customId.split(":")[0];
 
                 if (id === "cc") {
-                    const { customColourExecute: CustomColourExecute } =
-                        await import("./ui/meta.js");
-                    await CustomColourExecute(interaction);
+                    const { customColourExecute } =
+                        await import("./ui/colour.js");
+                    await customColourExecute(interaction);
                 }
             }
         } catch (error: any) {
