@@ -12,62 +12,196 @@ import {
     type APIStringSelectComponent,
     type Emoji,
 } from "discord.js";
+
 import { application } from "../bot.js";
 import { COLOUR_OPTION } from "../../constants.js";
 import { postUserColour } from "../../database.js";
 import { createColourPickerView } from "./basic.js";
 
+/* ------------------------------------------------ */
+/*                    CONSTANTS                     */
+/* ------------------------------------------------ */
+
+const MAX_EMOJIS = 2000;
+const EMOJI_CREATE_DELAY = 300;
+
+/* ------------------------------------------------ */
+/*                PRECOMPUTED DATA                  */
+/* ------------------------------------------------ */
+
+const presetHexSet = new Set(
+    Object.values(COLOUR_OPTION).map((c) => cleanHex(c.hex)),
+);
+
+/* ------------------------------------------------ */
+/*                UTILITY FUNCTIONS                 */
+/* ------------------------------------------------ */
+
+function cleanHex(hex: string): string {
+    return hex.startsWith("#") ? hex.slice(1).toLowerCase() : hex.toLowerCase();
+}
+
+/* ------------------------------------------------ */
+/*                COLOUR NAME CACHE                */
+/* ------------------------------------------------ */
+
 const colourNameCache = new Map<string, string>();
+const pendingColourName = new Map<string, Promise<string>>();
+
 export async function getColourName(hex: string): Promise<string> {
-    const clean = hex.replace("#", "").toLowerCase();
+    const clean = cleanHex(hex);
 
     if (colourNameCache.has(clean)) {
-        return colourNameCache.get(clean)!;
+        const value = colourNameCache.get(clean)!;
+
+        refreshLRU(colourNameCache, clean, value);
+
+        return value;
     }
 
-    try {
-        const res = await fetch(`https://www.thecolorapi.com/id?hex=${clean}`);
+    if (pendingColourName.has(clean)) return pendingColourName.get(clean)!;
 
-        const data = await res.json();
+    const promise = (async () => {
+        try {
+            const res = await fetch(
+                `https://www.thecolorapi.com/id?hex=${clean}`,
+            );
 
-        const name = data?.name?.value ?? `#${clean.toUpperCase()}`;
+            const data = await res.json();
 
-        colourNameCache.set(clean, name);
+            const name = data?.name?.value ?? `#${clean.toUpperCase()}`;
 
-        return name;
-    } catch {
-        const fallback = `#${clean.toUpperCase()}`;
+            colourNameCache.set(clean, name);
 
-        colourNameCache.set(clean, fallback);
+            return name;
+        } catch {
+            const fallback = `#${clean.toUpperCase()}`;
 
-        return fallback;
-    }
+            colourNameCache.set(clean, fallback);
+
+            return fallback;
+        }
+    })();
+
+    pendingColourName.set(clean, promise);
+
+    const result = await promise;
+
+    pendingColourName.delete(clean);
+
+    return result;
 }
-const MAX_EMOJIS = 2000;
-const EmojiCache = new Map<string, string>();
+
+/* ------------------------------------------------ */
+/*                EMOJI CACHE SYSTEM               */
+/* ------------------------------------------------ */
+
+type EmojiEntry = {
+    id: string;
+    str: string;
+};
+
+const EmojiCache = new Map<string, EmojiEntry>();
+
+const pendingEmoji = new Map<string, Promise<string>>();
+
+const emojiQueue: (() => Promise<void>)[] = [];
+
+let emojiCreating = false;
+
+/* ------------------------------------------------ */
+/*               EMOJI CACHE INIT                  */
+/* ------------------------------------------------ */
 
 export async function initEmojiCache() {
     const emojis = await application.emojis.fetch();
 
     emojis.forEach((emoji: Emoji) => {
-        if (emoji.name) {
-            EmojiCache.set(emoji.name, emoji.toString());
-        }
+        if (!emoji.name) return;
+
+        EmojiCache.set(emoji.name, {
+            id: emoji.id!,
+            str: emoji.toString(),
+        });
     });
 }
-export async function getEmoji(hex: string) {
-    if (EmojiCache.has(hex)) {
-        return EmojiCache.get(hex)!;
+
+/* ------------------------------------------------ */
+/*                  GET EMOJI                      */
+/* ------------------------------------------------ */
+
+export async function getEmoji(hex: string): Promise<string> {
+    const clean = cleanHex(hex);
+
+    if (EmojiCache.has(clean)) {
+        const entry = EmojiCache.get(clean)!;
+
+        refreshLRU(EmojiCache, clean, entry);
+
+        return entry.str;
     }
 
-    // Ensure space before creating
-    await ensureEmojiCapacity();
+    if (pendingEmoji.has(clean)) return pendingEmoji.get(clean)!;
 
-    const emojiString = await createEmoji(hex);
-    EmojiCache.set(hex, emojiString);
+    const promise = queueEmojiCreation(clean);
 
-    return emojiString;
+    pendingEmoji.set(clean, promise);
+
+    try {
+        const emojiString = await promise;
+        return emojiString;
+    } finally {
+        pendingEmoji.delete(clean);
+    }
 }
+
+/* ------------------------------------------------ */
+/*            EMOJI CREATION QUEUE                 */
+/* ------------------------------------------------ */
+
+function queueEmojiCreation(hex: string): Promise<string> {
+    return new Promise((resolve) => {
+        emojiQueue.push(async () => {
+            await ensureEmojiCapacity();
+
+            const entry = await createEmoji(hex);
+
+            EmojiCache.set(hex, entry);
+
+            resolve(entry.str);
+        });
+
+        processEmojiQueue();
+    });
+}
+
+async function processEmojiQueue() {
+    if (emojiCreating) return;
+
+    emojiCreating = true;
+
+    while (emojiQueue.length) {
+        const job = emojiQueue.shift()!;
+
+        try {
+            await job();
+        } catch (err) {
+            console.error("Emoji creation failed:", err);
+        }
+
+        await sleep(EMOJI_CREATE_DELAY);
+    }
+
+    emojiCreating = false;
+}
+
+function sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/* ------------------------------------------------ */
+/*             ENSURE CACHE CAPACITY               */
+/* ------------------------------------------------ */
 
 async function ensureEmojiCapacity() {
     if (EmojiCache.size < MAX_EMOJIS) return;
@@ -76,73 +210,96 @@ async function ensureEmojiCapacity() {
 
     if (!oldestKey) return;
 
-    const oldestEmojiString = EmojiCache.get(oldestKey);
+    const entry = EmojiCache.get(oldestKey);
 
-    if (!oldestEmojiString) return;
+    if (!entry) return;
 
-    const match = oldestEmojiString.match(/:(\d+)>$/);
-
-    if (!match) return;
-
-    const emojiId = match[1];
-
-    if (!emojiId) return;
-
-    await application.emojis.delete(emojiId);
+    await application.emojis.delete(entry.id);
 
     EmojiCache.delete(oldestKey);
 }
 
-async function createEmoji(colour: string) {
-    const size = 96;
+/* ------------------------------------------------ */
+/*               CANVAS REUSE SYSTEM               */
+/* ------------------------------------------------ */
+
+const canvas = createCanvas(96, 96);
+
+const ctx = canvas.getContext("2d");
+
+async function createEmoji(hex: string): Promise<EmojiEntry> {
+    if (!/^[0-9A-Fa-f]{6}$/.test(hex)) throw new Error("Invalid hex");
+
+    ctx.clearRect(0, 0, 96, 96);
+
     const radius = 12;
-    const canvas = createCanvas(size, size);
-    const ctx = canvas.getContext("2d");
 
-    if (!/^([0-9A-Fa-f]{6})$/.test(colour)) {
-        throw new Error("Colour must be 6-character hex");
-    }
-
-    ctx.fillStyle = `#${colour}`;
+    ctx.fillStyle = `#${hex}`;
 
     ctx.beginPath();
+
     ctx.moveTo(radius, 0);
-    ctx.lineTo(size - radius, 0);
-    ctx.quadraticCurveTo(size, 0, size, radius);
-    ctx.lineTo(size, size - radius);
-    ctx.quadraticCurveTo(size, size, size - radius, size);
-    ctx.lineTo(radius, size);
-    ctx.quadraticCurveTo(0, size, 0, size - radius);
+
+    ctx.lineTo(96 - radius, 0);
+
+    ctx.quadraticCurveTo(96, 0, 96, radius);
+
+    ctx.lineTo(96, 96 - radius);
+
+    ctx.quadraticCurveTo(96, 96, 96 - radius, 96);
+
+    ctx.lineTo(radius, 96);
+
+    ctx.quadraticCurveTo(0, 96, 0, 96 - radius);
+
     ctx.lineTo(0, radius);
+
     ctx.quadraticCurveTo(0, 0, radius, 0);
+
     ctx.closePath();
+
     ctx.fill();
 
     const buffer = canvas.toBuffer("image/png");
 
     const emoji = await application.emojis.create({
         attachment: buffer,
-        name: colour,
+
+        name: hex,
     });
 
-    return emoji.toString();
+    return {
+        id: emoji.id,
+
+        str: emoji.toString(),
+    };
 }
+
+/* ------------------------------------------------ */
+/*              COLOUR PICKER CREATION             */
+/* ------------------------------------------------ */
+
 export async function createColourPicker(
     defaultHex: string,
+
     uiType: "basic" | "advanced" = "basic",
+
     extra_colours: string[] = [],
 ) {
     const options: StringSelectMenuOptionBuilder[] = [];
+
     const used = new Set<string>();
 
-    const defaultClean = defaultHex.replace("#", "").toLowerCase();
+    const defaultClean = cleanHex(defaultHex);
 
     async function addColour(
-        hexRaw: string,
+        hex: string,
+
         emoji?: string,
+
         labelOverride?: string,
     ) {
-        const clean = hexRaw.replace("#", "").toLowerCase();
+        const clean = cleanHex(hex);
 
         if (used.has(clean)) return;
 
@@ -151,9 +308,13 @@ export async function createColourPicker(
         const label = labelOverride ?? (await getColourName(clean));
 
         const option = new StringSelectMenuOptionBuilder()
+
             .setLabel(label)
+
             .setValue(clean)
+
             .setDescription(`#${clean.toUpperCase()}`)
+
             .setDefault(clean === defaultClean);
 
         if (emoji) option.setEmoji(emoji);
@@ -161,174 +322,193 @@ export async function createColourPicker(
         options.push(option);
     }
 
-    // preset colours (USE GIVEN NAME)
     for (const [key, item] of Object.entries(COLOUR_OPTION)) {
-        const formatted = key
+        const label = key
             .split("-")
             .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
             .join(" ");
 
-        await addColour(item.hex, item.emoji, formatted);
+        await addColour(item.hex, item.emoji, label);
     }
 
-    // extra colours (USE API)
-    for (const hex of extra_colours) {
-        await addColour(hex, await getEmoji(hex));
-    }
+    await Promise.all(
+        extra_colours.map(async (hex) => {
+            const emoji = await getEmoji(hex);
 
-    // inject default if missing
+            await addColour(hex, emoji);
+        }),
+    );
+
     if (!used.has(defaultClean)) {
-        await addColour(defaultClean, await getEmoji(defaultClean));
+        const emoji = await getEmoji(defaultClean);
+
+        await addColour(defaultClean, emoji);
     }
 
-    const MAX_COLOURS = 24; // excluding "custom"
-
-    // Trim extra colours if exceeding limit
-    // Preserve preset colours and default
-    while (options.length > MAX_COLOURS) {
-        // find first removable option
+    while (options.length > 24) {
         const index = options.findIndex((option) => {
             const value = option.data.value;
+
             if (!value) return false;
+
             const clean = value.toLowerCase();
 
-            const isPreset = Object.values(COLOUR_OPTION).some(
-                (c) => c.hex.toLowerCase() === clean,
-            );
-            const isDefault = clean === defaultClean;
-
-            return !isPreset && !isDefault;
+            return !presetHexSet.has(clean) && clean !== defaultClean;
         });
 
         if (index === -1) break;
 
-        const [removed] = options.splice(index, 1);
+        const removed = options.splice(index, 1)[0];
+
         if (removed?.data.value) used.delete(removed.data.value);
     }
 
-    // custom option
     options.push(
         new StringSelectMenuOptionBuilder()
+
             .setLabel("Custom Colour")
+
             .setValue("custom")
+
             .setDescription("Enter a custom hex")
+
             .setEmoji("<:rgb:1048826497089146941>"),
     );
 
     return new StringSelectMenuBuilder()
+
         .setCustomId("cc:" + uiType)
+
         .setPlaceholder("Select a Colour")
+
         .addOptions(options);
 }
+
+/* ------------------------------------------------ */
+/*                GET COLOUR LIST                  */
+/* ------------------------------------------------ */
+
 export function getColourList(
     component: StringSelectMenuComponent | APIStringSelectComponent,
 ): string[] {
     const options = "options" in component ? component.options : [];
-    const allColours: string[] = [];
+
+    const colours: string[] = [];
 
     for (const option of options) {
         const value = option.value?.toLowerCase();
+
         if (!value) continue;
+
         if (value === "custom") break;
-        allColours.push(value);
+
+        colours.push(value);
     }
 
-    const presetHexes = Object.values(COLOUR_OPTION).map((c) =>
-        c.hex.toLowerCase(),
-    );
-    const startIndex = allColours.findIndex(
-        (hex) => !presetHexes.includes(hex),
-    );
-    if (startIndex === -1) return [];
-    return allColours.slice(startIndex);
+    const start = colours.findIndex((hex) => !presetHexSet.has(hex));
+
+    return start === -1 ? [] : colours.slice(start);
 }
+
+/* ------------------------------------------------ */
+/*            CUSTOM COLOUR EXECUTION              */
+/* ------------------------------------------------ */
+
 export async function customColourExecute(
     interaction: StringSelectMenuInteraction,
 ) {
     const value = interaction.values[0]!;
-    if (value === "custom") {
-        const id = Math.floor(Math.random() * 1000000);
-        const modal = createColourModal(id);
-        await interaction.showModal(modal);
-        const uiTypeRaw = interaction.customId.split(":")[1];
-        const uiType: "basic" | "advanced" =
-            uiTypeRaw === "basic" || uiTypeRaw === "advanced"
-                ? uiTypeRaw
-                : "basic";
-        let hasSubmitted = false;
 
-        try {
-            const submitted = await interaction.awaitModalSubmit({
-                filter: (i) =>
-                    i.user.id === interaction.user.id &&
-                    i.customId === `cm:${id}`,
-                time: 60000,
-            });
-            hasSubmitted = true;
-
-            const hexInput = submitted.fields.getTextInputValue("hex_input");
-
-            if (!/^([0-9A-Fa-f]{6})$/.test(hexInput)) {
-                await submitted.reply({
-                    content:
-                        "Invalid HEX code. Please enter 6 hexadecimal characters.",
-                    flags: MessageFlags.Ephemeral,
-                });
-                return;
-            }
-            await submitted.deferUpdate();
-
-            const hexColour = hexInput.toLowerCase();
-            postUserColour(interaction.user.id, hexColour);
-
-            const component = interaction.component;
-            const colourList = getColourList(component);
-
-            if (uiType === "basic") {
-                await submitted.message?.edit({
-                    components: await createColourPickerView(
-                        hexColour,
-                        colourList,
-                    ),
-                });
-            }
-        } catch {
-            // Only reply on timeout using the modal submit interaction
-            if (hasSubmitted) {
-                await interaction.followUp({
-                    content: "You did not submit a colour in time.",
-                    flags: MessageFlags.Ephemeral,
-                });
-            }
-        }
-    } else {
+    if (value !== "custom") {
         postUserColour(interaction.user.id, value);
+
         await interaction.deferUpdate();
+
+        return;
     }
+
+    const id = Math.floor(Math.random() * 1000000);
+
+    const modal = createColourModal(id);
+
+    await interaction.showModal(modal);
+
+    let submitted;
+
+    try {
+        submitted = await interaction.awaitModalSubmit({
+            filter: (i) =>
+                i.user.id === interaction.user.id && i.customId === `cm:${id}`,
+
+            time: 60000,
+        });
+    } catch {
+        return;
+    }
+
+    const hex = submitted.fields.getTextInputValue("hex_input").toLowerCase();
+
+    if (!/^[0-9a-f]{6}$/.test(hex)) {
+        await submitted.reply({
+            content: "Invalid HEX code",
+
+            flags: MessageFlags.Ephemeral,
+        });
+
+        return;
+    }
+
+    postUserColour(interaction.user.id, hex);
+
+    await submitted.deferUpdate();
+
+    const list = getColourList(interaction.component);
+
+    await submitted.message?.edit({
+        components: await createColourPickerView(hex, list),
+    });
 }
 
+/* ------------------------------------------------ */
+/*                MODAL CREATION                   */
+/* ------------------------------------------------ */
+
 export function createColourModal(id: number) {
-    // Create the modal
     const modal = new ModalBuilder()
+
         .setCustomId(`cm:${id}`)
+
         .setTitle("Custom Colour");
 
-    // Create the text input
-    const hexInput = new TextInputBuilder()
+    const input = new TextInputBuilder()
+
         .setCustomId("hex_input")
+
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder("ffffff")
+
         .setRequired(true)
+
         .setMinLength(6)
+
         .setMaxLength(6);
 
-    // Wrap the text input with a label
-    const hexLabel = new LabelBuilder()
-        .setLabel("HEX code of your Colour")
-        .setTextInputComponent(hexInput);
+    const label = new LabelBuilder()
 
-    // Add the labeled component to the modal
-    modal.addLabelComponents(hexLabel);
+        .setLabel("HEX code")
+
+        .setTextInputComponent(input);
+
+    modal.addLabelComponents(label);
 
     return modal;
+}
+
+/* ------------------------------------------------ */
+/*                 LRU REFRESH                     */
+/* ------------------------------------------------ */
+
+function refreshLRU<K, V>(map: Map<K, V>, key: K, value: V) {
+    map.delete(key);
+
+    map.set(key, value);
 }
