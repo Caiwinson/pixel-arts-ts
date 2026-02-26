@@ -8,6 +8,7 @@ import {
 } from "discord.js";
 import { undoPixelUpdate } from "../../database.js";
 import { createCanvasEmbed } from "../utils.js";
+import { createClosedView } from "./closed.js";
 
 export function createConfirmCloseModal(id: number) {
     const modal = new ModalBuilder()
@@ -82,7 +83,7 @@ export async function closeExecute(interaction: ButtonInteraction) {
 
                 await message.edit({
                     content: "Canvas closed.",
-                    components: [],
+                    components: createClosedView(),
                 });
             }
         } catch {

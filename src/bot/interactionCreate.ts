@@ -4,12 +4,15 @@ import { createCommandExecute } from "./commands/create.js";
 import { pixelButtonExecute } from "./ui/basic.js";
 import { closeExecute, undoCanvasExecute } from "./ui/meta.js";
 import { customColourExecute } from "./ui/colour.js";
+import { downloadButtonExecute, timelapseButtonExecute } from "./ui/closed.js";
 
 // Dispatch maps
 const buttonHandlers: Record<string, (i: ButtonInteraction) => Promise<void>> = {
     pb: pixelButtonExecute as (i: ButtonInteraction) => Promise<void>,
     cl: closeExecute as (i: ButtonInteraction) => Promise<void>,
     ud: undoCanvasExecute as (i: ButtonInteraction) => Promise<void>,
+    download: downloadButtonExecute as (i: ButtonInteraction) => Promise<void>,
+    timelapse: timelapseButtonExecute as (i: ButtonInteraction) => Promise<void>,
 };
 
 const selectHandlers: Record<string, (i: StringSelectMenuInteraction) => Promise<void>> = {
