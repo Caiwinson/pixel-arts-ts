@@ -1,3 +1,6 @@
+import path from "path";
+import fs from "fs";
+
 // Environment configuration
 export const ENV = {
     discord_token: process.env.DISCORD_TOKEN,
@@ -15,6 +18,18 @@ export const DBL_API_TOKEN = ENV.dblToken;
 export const DISCORDS_ME_TOKEN = ENV.discordsMeToken;
 export const DOMAIN_URL = ENV.domainUrl;
 export const EMBED_COLOUR = 5793266;
+
+// Paths
+export const DATA_DIR = path.join(process.cwd(), "data");
+export const DB_PATH = path.join(DATA_DIR, "data.db");
+export const PREVIEW_PATH = path.join(DATA_DIR, "preview");
+
+// Ensure directories exist
+[DATA_DIR, PREVIEW_PATH].forEach((dir) => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+});
 
 // Type definition for color options
 interface ColourOption {

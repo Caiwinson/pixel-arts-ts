@@ -2,10 +2,8 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
+import { DB_PATH } from "./constants.js";
 
-// --- Setup ---
-
-const DB_PATH = "data/data.db";
 
 // Ensure the data directory exists
 const dbDir = path.dirname(DB_PATH);
