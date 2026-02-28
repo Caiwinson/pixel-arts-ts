@@ -1,27 +1,56 @@
-import { Events, type Interaction, type ChatInputCommandInteraction, type ButtonInteraction, type StringSelectMenuInteraction } from "discord.js";
+import {
+    Events,
+    type Interaction,
+    type ChatInputCommandInteraction,
+    type ButtonInteraction,
+    type StringSelectMenuInteraction,
+} from "discord.js";
 
 import { createCommandExecute } from "./commands/create.js";
 import { pixelButtonExecute } from "./ui/basic.js";
 import { closeExecute, undoCanvasExecute } from "./ui/meta.js";
 import { customColourExecute } from "./ui/colour.js";
-import { downloadButtonExecute, timelapseButtonExecute, timelapseSelectExecute } from "./ui/closed.js";
+import {
+    downloadButtonExecute,
+    timelapseButtonExecute,
+    timelapseSelectExecute,
+} from "./ui/closed.js";
+import { rowOptionsExecute } from "./ui/advance.js";
 
 // Dispatch maps
-const buttonHandlers: Record<string, (i: ButtonInteraction) => Promise<void>> = {
-    pb: pixelButtonExecute as (i: ButtonInteraction) => Promise<void>,
-    cl: closeExecute as (i: ButtonInteraction) => Promise<void>,
-    ud: undoCanvasExecute as (i: ButtonInteraction) => Promise<void>,
-    download: downloadButtonExecute as (i: ButtonInteraction) => Promise<void>,
-    timelapse: timelapseButtonExecute as (i: ButtonInteraction) => Promise<void>,
+const buttonHandlers: Record<string, (i: ButtonInteraction) => Promise<void>> =
+    {
+        pb: pixelButtonExecute as (i: ButtonInteraction) => Promise<void>,
+        cl: closeExecute as (i: ButtonInteraction) => Promise<void>,
+        ud: undoCanvasExecute as (i: ButtonInteraction) => Promise<void>,
+        download: downloadButtonExecute as (
+            i: ButtonInteraction,
+        ) => Promise<void>,
+        timelapse: timelapseButtonExecute as (
+            i: ButtonInteraction,
+        ) => Promise<void>,
+    };
+
+const selectHandlers: Record<
+    string,
+    (i: StringSelectMenuInteraction) => Promise<void>
+> = {
+    cc: customColourExecute as (
+        i: StringSelectMenuInteraction,
+    ) => Promise<void>,
+    ts: timelapseSelectExecute as (
+        i: StringSelectMenuInteraction,
+    ) => Promise<void>,
+    sel: rowOptionsExecute as (i: StringSelectMenuInteraction) => Promise<void>,
 };
 
-const selectHandlers: Record<string, (i: StringSelectMenuInteraction) => Promise<void>> = {
-    cc: customColourExecute as (i: StringSelectMenuInteraction) => Promise<void>,
-    ts: timelapseSelectExecute as (i: StringSelectMenuInteraction) => Promise<void>,
-};
-
-const commandHandlers: Record<string, (i: ChatInputCommandInteraction) => Promise<void>> = {
-    "create": createCommandExecute as (i: ChatInputCommandInteraction) => Promise<void>,
+const commandHandlers: Record<
+    string,
+    (i: ChatInputCommandInteraction) => Promise<void>
+> = {
+    create: createCommandExecute as (
+        i: ChatInputCommandInteraction,
+    ) => Promise<void>,
 };
 
 export default {
@@ -52,7 +81,6 @@ export default {
                 if (handler) await handler(interaction);
                 return;
             }
-
         } catch (error: any) {
             console.error("Interaction error:", error);
 

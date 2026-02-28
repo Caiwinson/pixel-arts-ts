@@ -22,7 +22,7 @@ export const EMBED_COLOUR = 5793266;
 // Paths
 export const DATA_DIR = path.join(process.cwd(), "data");
 export const DB_PATH = path.join(DATA_DIR, "data.db");
-export const PREVIEW_PATH = path.join(DATA_DIR, "preview");
+export const PREVIEW_PATH = path.join(DATA_DIR, "cache", "preview");
 
 // Ensure directories exist
 [DATA_DIR, PREVIEW_PATH].forEach((dir) => {

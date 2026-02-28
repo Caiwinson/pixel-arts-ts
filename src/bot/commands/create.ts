@@ -14,6 +14,7 @@ import {
     getUserColour,
 } from "../../database.js";
 import { createColourModal } from "../ui/colour.js";
+import { createAdvanceView } from "../ui/advance.js";
 
 const colourChoices = [
     ...Object.entries(COLOUR_OPTION).map(([name, data]) => ({
@@ -127,23 +128,38 @@ export async function createCommandExecute(
 
     const key = BaseColour.repeat(size ** 2);
     const embed = createCanvasEmbed(key);
+    const defaultHex = getUserColour(interaction.user.id);
 
-    await interaction.reply({
-        content: `${interaction.user} has created a canvas.`,
-        embeds: [embed],
-        components: createCanvasView(),
-        withResponse: true,
-    });
 
-    const message = await interaction.fetchReply();
+    if (size === 5) {
+        await interaction.reply({
+            content: `${interaction.user} has created a canvas.`,
+            embeds: [embed],
+            components: createCanvasView(),
+            withResponse: true,
+        });
 
-    await message.reply({
-        content: "Pick a colour!",
-        components: await createColourPickerView(
-            getUserColour(interaction.user.id),
-        ),
-    });
+        const message = await interaction.fetchReply();
 
-    appendPixelUpdate(message.id, key, null, interaction.user.id);
-    appendCanvasCount();
+        await message.reply({
+            content: "Pick a colour!",
+            components: await createColourPickerView(
+                defaultHex,
+            ),
+        });
+
+        appendPixelUpdate(message.id, key, null, interaction.user.id);
+        appendCanvasCount();
+    } else {
+        await interaction.reply({
+            content: `${interaction.user} has created a canvas.`,
+            embeds: [embed],
+            components: await createAdvanceView(
+                size,
+                1,
+                1,
+                defaultHex,
+            ),
+        })
+    }
 }
