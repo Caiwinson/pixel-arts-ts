@@ -155,12 +155,17 @@ async function executeToolModal(
     const id = Math.floor(Math.random() * 1_000_000);
     const modal = await createToolModal(id, title, interaction, size);
     await interaction.showModal(modal);
+    let submitted;
 
-    const submitted = await interaction.awaitModalSubmit({
-        filter: (i) =>
-            i.user.id === interaction.user.id && i.customId === `tm:${id}`,
-        time: 60_000,
-    });
+    try {
+        submitted = await interaction.awaitModalSubmit({
+            filter: (i) =>
+                i.user.id === interaction.user.id && i.customId === `tm:${id}`,
+            time: 60_000,
+        });
+    } catch {
+        return;
+    }
 
     const start = submitted.fields.getTextInputValue("start");
     const end = submitted.fields.getTextInputValue("end");
