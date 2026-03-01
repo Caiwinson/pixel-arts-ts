@@ -16,7 +16,7 @@ import {
     timelapseButtonExecute,
     timelapseSelectExecute,
 } from "./ui/closed.js";
-import { placePixelExecute, rowOptionsExecute } from "./ui/advance.js";
+import { placePixelExecute, rowOptionsExecute, toggleToolExecute } from "./ui/advance.js";
 
 // Dispatch maps
 const buttonHandlers: Record<string, (i: ButtonInteraction) => Promise<void>> =
@@ -31,6 +31,7 @@ const buttonHandlers: Record<string, (i: ButtonInteraction) => Promise<void>> =
             i: ButtonInteraction,
         ) => Promise<void>,
         place: placePixelExecute as (i: ButtonInteraction) => Promise<void>,
+        tt: toggleToolExecute as (i: ButtonInteraction) => Promise<void>,
     };
 
 const selectHandlers: Record<

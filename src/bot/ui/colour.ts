@@ -481,6 +481,9 @@ export async function colourMenuExecute(
         const size = getStringSelectById(interaction.message, "sel:x")?.options
             .length!;
 
+        const toolsEnabled = !getStringSelectById(interaction.message, "tool")
+            ?.disabled;
+
         await submitted.message?.edit({
             components: await createAdvanceView(
                 size,
@@ -488,6 +491,7 @@ export async function colourMenuExecute(
                 selection.y,
                 hex,
                 list,
+                toolsEnabled,
             ),
         });
     }

@@ -11,6 +11,7 @@ import {
 import { createColourPicker, getColourList } from "./colour.js";
 import {
     createCanvasEmbed,
+    ensureOwner,
     getCanvasKey,
     getStringSelectById,
 } from "../utils.js";
@@ -19,6 +20,7 @@ import {
     getImageHash,
     getUserColour,
 } from "../../database.js";
+import { createToolMenu } from "./tools.js";
 
 type PixelSelection = {
     x: number;
@@ -77,6 +79,7 @@ export async function createAdvanceView(
     defaultY: number = 1,
     defaultHex: string,
     extra_colours: string[] = [],
+    showsTool: boolean = true,
 ) {
     // X SELECT MENU
     const xMenu = new StringSelectMenuBuilder()
@@ -123,9 +126,21 @@ export async function createAdvanceView(
             .setLabel("Undo")
             .setEmoji("↩️")
             .setStyle(ButtonStyle.Secondary),
+
+        new ButtonBuilder()
+            .setCustomId("tt")
+            .setLabel("Toggle Tool")
+            .setEmoji("🔧")
+            .setStyle(ButtonStyle.Secondary),
     );
 
-    return [xRow, yRow, cRow, bRow];
+    const tMenu = createToolMenu(showsTool);
+
+    const tRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+        tMenu,
+    );
+
+    return [xRow, yRow, cRow, bRow, tRow];
 }
 
 export async function rowOptionsExecute(
@@ -206,6 +221,9 @@ export async function placePixelExecute(interaction: ButtonInteraction) {
 
     const colourList = getColourList(colourMenu);
 
+    const toolsEnabled = !getStringSelectById(interaction.message, "tool")
+        ?.disabled;
+
     const newKey =
         keyStr.slice(0, num * 6) + colour + keyStr.slice(num * 6 + 6);
 
@@ -219,6 +237,7 @@ export async function placePixelExecute(interaction: ButtonInteraction) {
             selection.y,
             colour,
             colourList,
+            toolsEnabled,
         ),
     });
 
@@ -228,4 +247,39 @@ export async function placePixelExecute(interaction: ButtonInteraction) {
         `${num}:${colour}`,
         interaction.user.id,
     );
+}
+
+export async function toggleToolExecute(interaction: ButtonInteraction) {
+    
+    const allowed = ensureOwner(interaction, interaction.message, "You cannot toggle tools on this canvas.");
+    if (!allowed) return;
+    
+
+    const toolMenu = getStringSelectById(interaction.message, "tool");
+    const toolsEnabled = toolMenu?.disabled;
+
+    const selection = getUserSelection(
+        interaction.message.id,
+        interaction.user.id,
+    );
+
+    const size = getStringSelectById(interaction.message, "sel:x")?.options
+        .length!;
+
+    const colourList = getColourList(
+        getStringSelectById(interaction.message, "cc:advanced")!,
+    );
+
+    const colour = getUserColour(interaction.user.id);
+
+    await interaction.update({
+        components: await createAdvanceView(
+            size,
+            selection.x,
+            selection.y,
+            colour,
+            colourList,
+            toolsEnabled,
+        ),
+    });
 }
