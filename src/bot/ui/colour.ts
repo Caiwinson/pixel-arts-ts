@@ -17,6 +17,8 @@ import { application } from "../bot.js";
 import { COLOUR_OPTION } from "../../constants.js";
 import { postUserColour } from "../../database.js";
 import { createColourPickerView } from "./basic.js";
+import { createAdvanceView, getUserSelection } from "./advance.js";
+import { getStringSelectById } from "../utils.js";
 
 /* ------------------------------------------------ */
 /*                    CONSTANTS                     */
@@ -414,7 +416,7 @@ export function getColourList(
 /*            CUSTOM COLOUR EXECUTION              */
 /* ------------------------------------------------ */
 
-export async function customColourExecute(
+export async function colourMenuExecute(
     interaction: StringSelectMenuInteraction,
 ) {
     const value = interaction.values[0]!;
@@ -464,9 +466,31 @@ export async function customColourExecute(
 
     const list = getColourList(interaction.component);
 
-    await submitted.message?.edit({
-        components: await createColourPickerView(hex, list),
-    });
+    const type = interaction.customId.split(":")[1]!;
+
+    if (type === "basic") {
+        await submitted.message?.edit({
+            components: await createColourPickerView(hex, list),
+        });
+    } else {
+        const selection = getUserSelection(
+            interaction.message.id,
+            interaction.user.id,
+        );
+
+        const size = getStringSelectById(interaction.message, "sel:x")?.options
+            .length!;
+
+        await submitted.message?.edit({
+            components: await createAdvanceView(
+                size,
+                selection.x,
+                selection.y,
+                hex,
+                list,
+            ),
+        });
+    }
 }
 
 /* ------------------------------------------------ */

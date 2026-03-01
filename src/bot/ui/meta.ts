@@ -6,9 +6,32 @@ import {
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
 } from "discord.js";
-import { undoPixelUpdate } from "../../database.js";
-import { createCanvasEmbed } from "../utils.js";
+import { getCanvasHistory, getImageHash, undoPixelUpdate } from "../../database.js";
+import { createCanvasEmbed, ensureOwner, getCanvasKey } from "../utils.js";
 import { createClosedView } from "./closed.js";
+
+async function resolveCanvasMessage(
+    interaction: ButtonInteraction,
+    mode: string,
+) {
+    if (mode !== "basic") {
+        return interaction.message;
+    }
+
+    try {
+        return await interaction.channel?.messages.fetch({
+            message: interaction.message.reference?.messageId!,
+            force: true,
+        });
+    } catch {
+        await interaction.reply({
+            content:
+                "No canvas found. It may have been deleted or is no longer available.",
+            flags: MessageFlags.Ephemeral,
+        });
+        return null;
+    }
+}
 
 export function createConfirmCloseModal(id: number) {
     const modal = new ModalBuilder()
@@ -33,67 +56,81 @@ export function createConfirmCloseModal(id: number) {
     return modal;
 }
 
+async function confirmClose(interaction: ButtonInteraction, id: number) {
+    const modal = createConfirmCloseModal(id);
+    await interaction.showModal(modal);
+
+    const submitted = await interaction.awaitModalSubmit({
+        filter: (i) =>
+            i.user.id === interaction.user.id && i.customId === `clm:${id}`,
+        time: 60_000,
+    });
+
+    await submitted.deferUpdate();
+
+    return submitted.fields.getStringSelectValues("confirm")[0] === "y";
+}
+
 export async function closeExecute(interaction: ButtonInteraction) {
-    const id = Math.floor(Math.random() * 1000000);
+    const id = Math.floor(Math.random() * 1_000_000);
     const mode = interaction.customId.split(":")[1];
 
+    const message = await resolveCanvasMessage(interaction, mode!);
+    if (!message) return;
+
+    const allowed = await ensureOwner(
+        interaction,
+        message,
+        "You cannot close this canvas.",
+    );
+    if (!allowed) return;
+
+    if (getCanvasHistory(message.id).length <= 2) {
+        await interaction.reply({
+            content: "Not enough changes were made.",
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+
+    let confirmed = false;
+
+    try {
+        confirmed = await confirmClose(interaction, id);
+    } catch {
+        await interaction.followUp({
+            content: "You did not confirm in time.",
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+
+    if (!confirmed) return;
+
+    // MODE-SPECIFIC ACTION
     if (mode === "basic") {
-        let message;
+        await interaction.message.delete();
 
-        try {
-            message = await interaction.channel?.messages.fetch({
-                message: interaction.message.reference?.messageId!,
-                force: true,
-            })!;
-        } catch (error) {
-            await interaction.reply({
-                content:
-                    "No canvas found. It may have been deleted or is no longer available.",
-                flags: MessageFlags.Ephemeral,
-            });
+        await message.edit({
+            content: "Canvas closed.",
+            components: createClosedView(),
+        });
+    } else {
+        const url = message.embeds?.[0]?.image?.url!;
 
-            return;
+        let key = getCanvasKey(url);
+
+        if (url.includes("image_large")) {
+            key = getImageHash(key)![1];
         }
 
-        if (message.interactionMetadata?.user.id !== interaction.user.id) {
-            await interaction.reply({
-                content: "You cannot close this canvas.",
-                flags: MessageFlags.Ephemeral,
-            });
-            return;
-        }
+        const embed = createCanvasEmbed(key);
 
-        const modal = createConfirmCloseModal(id);
-        await interaction.showModal(modal);
-        let hasSubmitted = false;
-
-        try {
-            const submitted = await interaction.awaitModalSubmit({
-                filter: (i) =>
-                    i.user.id === interaction.user.id &&
-                    i.customId === `clm:${id}`,
-                time: 60_000,
-            });
-            hasSubmitted = true;
-
-            const value = submitted.fields.getStringSelectValues("confirm")[0];
-            await submitted.deferUpdate();
-            if (value === "y") {
-                await interaction.message.delete();
-
-                await message.edit({
-                    content: "Canvas closed.",
-                    components: createClosedView(),
-                });
-            }
-        } catch {
-            if (hasSubmitted) {
-                await interaction.followUp({
-                    content: "You did not confirm in time.",
-                    flags: MessageFlags.Ephemeral,
-                });
-            }
-        }
+        await message.edit({
+            content: "Canvas closed.",
+            embeds: [embed],
+            components: createClosedView(),
+        });
     }
 }
 
@@ -124,7 +161,7 @@ function isRateLimited(userId: string): boolean {
 
 export async function undoCanvasExecute(interaction: ButtonInteraction) {
     const mode = interaction.customId.split(":")[1];
-    // RATE LIMIT CHECK
+
     if (isRateLimited(interaction.user.id)) {
         await interaction.reply({
             content:
@@ -134,46 +171,40 @@ export async function undoCanvasExecute(interaction: ButtonInteraction) {
         return;
     }
 
+    const message =
+        mode === "basic"
+            ? await resolveCanvasMessage(interaction, mode)
+            : interaction.message;
+
+    if (!message) return;
+
+    if (message.interactionMetadata?.user.id !== interaction.user.id) {
+        await interaction.reply({
+            content: "You cannot undo this action.",
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+
+    const key = undoPixelUpdate(message.id);
+
+    if (!key) {
+        await interaction.reply({
+            content: "No changes to undo.",
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+
+    const showsPlot =
+        message.embeds?.[0]?.image?.url?.includes("?plot=True") ?? false;
+
+    const embed = createCanvasEmbed(key, showsPlot);
+
     if (mode === "basic") {
-        let message;
-
-        try {
-            message = await interaction.channel?.messages.fetch({
-                message: interaction.message.reference?.messageId!,
-                force: true,
-            })!;
-        } catch (error) {
-            await interaction.reply({
-                content:
-                    "No canvas found. It may have been deleted or is no longer available.",
-                flags: MessageFlags.Ephemeral,
-            });
-
-            return;
-        }
-
-        if (message.interactionMetadata?.user.id !== interaction.user.id) {
-            await interaction.reply({
-                content: "You cannot undo this action.",
-                flags: MessageFlags.Ephemeral,
-            });
-            return;
-        }
-
-        const key = undoPixelUpdate(message.id);
-
-        if (!key) {
-            await interaction.reply({
-                content: "No changes to undo.",
-                flags: MessageFlags.Ephemeral,
-            });
-            return;
-        }
-
         await interaction.deferUpdate();
-
-        const embed = createCanvasEmbed(key);
-
         await message.edit({ embeds: [embed] });
+    } else {
+        await interaction.update({ embeds: [embed] });
     }
 }

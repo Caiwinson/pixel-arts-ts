@@ -4,18 +4,19 @@ import {
     type ChatInputCommandInteraction,
     type ButtonInteraction,
     type StringSelectMenuInteraction,
+    MessageFlags,
 } from "discord.js";
 
 import { createCommandExecute } from "./commands/create.js";
 import { pixelButtonExecute } from "./ui/basic.js";
 import { closeExecute, undoCanvasExecute } from "./ui/meta.js";
-import { customColourExecute } from "./ui/colour.js";
+import { colourMenuExecute } from "./ui/colour.js";
 import {
     downloadButtonExecute,
     timelapseButtonExecute,
     timelapseSelectExecute,
 } from "./ui/closed.js";
-import { rowOptionsExecute } from "./ui/advance.js";
+import { placePixelExecute, rowOptionsExecute } from "./ui/advance.js";
 
 // Dispatch maps
 const buttonHandlers: Record<string, (i: ButtonInteraction) => Promise<void>> =
@@ -29,15 +30,14 @@ const buttonHandlers: Record<string, (i: ButtonInteraction) => Promise<void>> =
         timelapse: timelapseButtonExecute as (
             i: ButtonInteraction,
         ) => Promise<void>,
+        place: placePixelExecute as (i: ButtonInteraction) => Promise<void>,
     };
 
 const selectHandlers: Record<
     string,
     (i: StringSelectMenuInteraction) => Promise<void>
 > = {
-    cc: customColourExecute as (
-        i: StringSelectMenuInteraction,
-    ) => Promise<void>,
+    cc: colourMenuExecute as (i: StringSelectMenuInteraction) => Promise<void>,
     ts: timelapseSelectExecute as (
         i: StringSelectMenuInteraction,
     ) => Promise<void>,
@@ -90,7 +90,7 @@ export default {
 
             const reply = {
                 content: "Something went wrong.",
-                ephemeral: true,
+                flag: MessageFlags.Ephemeral,
             };
 
             if (interaction.replied || interaction.deferred) {

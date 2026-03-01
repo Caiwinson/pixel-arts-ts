@@ -1,6 +1,13 @@
-import { EmbedBuilder } from "discord.js";
+import {
+    ButtonInteraction,
+    ComponentType,
+    EmbedBuilder,
+    Message,
+    MessageFlags,
+    StringSelectMenuComponent,
+} from "discord.js";
 import { EMBED_COLOUR, DOMAIN_URL } from "../constants.js";
-import { postImageHash } from "../database.js";
+import { getImageHash, postImageHash } from "../database.js";
 
 export function hexToInt(hex: string): number {
     // Remove leading "#" if present
@@ -23,10 +30,10 @@ export function createCanvasEmbed(key: string, showPlot = false): EmbedBuilder {
 
     let url: string;
     if (size === 5 || size === 10 || size === 15) {
-        url = `${DOMAIN_URL}/image/${key}.png${size > 5 ? "?plot=True" : ""}`;
+        url = `${DOMAIN_URL}/image/${key}.png`;
     } else if (size === 20 || size === 25) {
         const imgHash = postImageHash(key, size);
-        url = `${DOMAIN_URL}/image_large/${imgHash}.png?plot=True`;
+        url = `${DOMAIN_URL}/image_large/${imgHash}.png`;
     } else {
         throw new Error("Invalid canvas size");
     }
@@ -37,5 +44,49 @@ export function createCanvasEmbed(key: string, showPlot = false): EmbedBuilder {
 }
 
 export function getCanvasKey(url: string): string {
-    return url.split("/").pop()?.split(".")[0]!;
+    // Get the last segment after "/", default to empty string if undefined
+    const lastSegment = url.split("/").pop() ?? "";
+
+    // Remove query string if present; default to empty string if undefined
+    const noQuery = lastSegment.split("?")[0] ?? "";
+
+    // Split on period and take the first part; safe because noQuery is always string
+    const key = noQuery.split(".")[0]!;
+
+    return key;
+}
+
+export function getStringSelectById(
+    message: Message,
+    customId: string,
+): StringSelectMenuComponent | undefined {
+    for (const row of message.components) {
+        if (row.type !== ComponentType.ActionRow) continue;
+
+        for (const component of row.components) {
+            if (
+                component.type === ComponentType.StringSelect &&
+                component.customId === customId
+            ) {
+                return component;
+            }
+        }
+    }
+
+    return undefined;
+}
+
+export async function ensureOwner(
+    interaction: ButtonInteraction,
+    message: Message,
+    denyMessage: string,
+) {
+    if (message.interactionMetadata?.user.id !== interaction.user.id) {
+        await interaction.reply({
+            content: denyMessage,
+            flags: MessageFlags.Ephemeral,
+        });
+        return false;
+    }
+    return true;
 }

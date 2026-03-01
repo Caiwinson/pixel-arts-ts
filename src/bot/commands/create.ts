@@ -127,9 +127,8 @@ export async function createCommandExecute(
     }
 
     const key = BaseColour.repeat(size ** 2);
-    const embed = createCanvasEmbed(key);
+    const embed = createCanvasEmbed(key, size > 5);
     const defaultHex = getUserColour(interaction.user.id);
-
 
     if (size === 5) {
         await interaction.reply({
@@ -143,9 +142,7 @@ export async function createCommandExecute(
 
         await message.reply({
             content: "Pick a colour!",
-            components: await createColourPickerView(
-                defaultHex,
-            ),
+            components: await createColourPickerView(defaultHex),
         });
 
         appendPixelUpdate(message.id, key, null, interaction.user.id);
@@ -154,12 +151,13 @@ export async function createCommandExecute(
         await interaction.reply({
             content: `${interaction.user} has created a canvas.`,
             embeds: [embed],
-            components: await createAdvanceView(
-                size,
-                1,
-                1,
-                defaultHex,
-            ),
-        })
+            components: await createAdvanceView(size, 1, 1, defaultHex),
+            withResponse: true, 
+        });
+
+        const message = await interaction.fetchReply();
+
+        appendPixelUpdate(message.id, key, null, interaction.user.id);
+        appendCanvasCount();
     }
 }

@@ -1,13 +1,24 @@
 import {
-    ActionRow,
     ActionRowBuilder,
     ButtonBuilder,
+    ButtonInteraction,
     ButtonStyle,
+    Message,
     StringSelectMenuBuilder,
     StringSelectMenuInteraction,
     StringSelectMenuOptionBuilder,
 } from "discord.js";
-import { createColourPicker } from "./colour.js";
+import { createColourPicker, getColourList } from "./colour.js";
+import {
+    createCanvasEmbed,
+    getCanvasKey,
+    getStringSelectById,
+} from "../utils.js";
+import {
+    appendPixelUpdate,
+    getImageHash,
+    getUserColour,
+} from "../../database.js";
 
 type PixelSelection = {
     x: number;
@@ -23,6 +34,23 @@ type AdvanceCanvasState = {
 };
 
 const advanceCanvasState: AdvanceCanvasState = {};
+
+export function getUserSelection(
+    messageId: string,
+    userId: string,
+): PixelSelection {
+    // Initialize message entry if missing
+    if (!advanceCanvasState[messageId]) {
+        advanceCanvasState[messageId] = {};
+    }
+
+    // Initialize user selection if missing, default x=1, y=1
+    if (!advanceCanvasState[messageId][userId]) {
+        advanceCanvasState[messageId][userId] = { x: 1, y: 1 };
+    }
+
+    return advanceCanvasState[messageId][userId];
+}
 
 function createRowOptions(
     type: "x" | "y",
@@ -83,6 +111,18 @@ export async function createAdvanceView(
             .setCustomId("place")
             .setLabel("Place Pixel")
             .setStyle(ButtonStyle.Primary),
+
+        new ButtonBuilder()
+            .setCustomId("cl:advanced")
+            .setLabel("Close")
+            .setEmoji("❌")
+            .setStyle(ButtonStyle.Danger),
+
+        new ButtonBuilder()
+            .setCustomId("ud:advanced")
+            .setLabel("Undo")
+            .setEmoji("↩️")
+            .setStyle(ButtonStyle.Secondary),
     );
 
     return [xRow, yRow, cRow, bRow];
@@ -113,4 +153,79 @@ export async function rowOptionsExecute(
     else state.y = numericValue;
 
     await interaction.deferUpdate();
+}
+
+export function getCanvasState(messageId: Message) {
+    // Safely get URL from embed
+    const url = messageId.embeds?.[0]?.image?.url;
+    if (!url) return null; // no image, abort
+
+    // Extract key from URL
+    let key = getCanvasKey(url);
+
+    // Determine if ?plot=True is in the URL
+    const showsPlot = url.includes("?plot=True");
+
+    // Determine size
+    let size: number | undefined;
+    if (url.includes("image_large")) {
+        const result = getImageHash(key);
+        if (result) {
+            [size, key] = result; // destructure safely
+        }
+    } else {
+        // If not large, infer size from key length
+        size = Math.sqrt(key.length / 6);
+    }
+
+    // Return structured state
+    return { key, size, showsPlot };
+}
+
+export async function placePixelExecute(interaction: ButtonInteraction) {
+    const canvasState = getCanvasState(interaction.message);
+    if (!canvasState) return;
+
+    const { key: keyStr, size, showsPlot } = canvasState;
+    if (!size) return;
+
+    const selection = getUserSelection(
+        interaction.message.id,
+        interaction.user.id,
+    );
+
+    const x = selection.x - 1;
+    const y = selection.y - 1;
+
+    const colour = getUserColour(interaction.user.id);
+    const num = y * size + x;
+
+    const colourMenu = getStringSelectById(interaction.message, "cc:advanced");
+
+    if (!colourMenu) return;
+
+    const colourList = getColourList(colourMenu);
+
+    const newKey =
+        keyStr.slice(0, num * 6) + colour + keyStr.slice(num * 6 + 6);
+
+    const embeds = createCanvasEmbed(newKey, showsPlot);
+
+    await interaction.update({
+        embeds: [embeds],
+        components: await createAdvanceView(
+            size,
+            selection.x,
+            selection.y,
+            colour,
+            colourList,
+        ),
+    });
+
+    appendPixelUpdate(
+        interaction.message.id,
+        newKey,
+        `${num}:${colour}`,
+        interaction.user.id,
+    );
 }
