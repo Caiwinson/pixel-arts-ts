@@ -51,7 +51,11 @@ export function getCanvasKey(url: string): string {
     const noQuery = lastSegment.split("?")[0] ?? "";
 
     // Split on period and take the first part; safe because noQuery is always string
-    const key = noQuery.split(".")[0]!;
+    let key = noQuery.split(".")[0]!;
+
+    if (url.includes("image_large")) {
+        key = getImageHash(key)![1];
+    }
 
     return key;
 }

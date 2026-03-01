@@ -176,22 +176,11 @@ export function getCanvasState(messageId: Message) {
     if (!url) return null; // no image, abort
 
     // Extract key from URL
-    let key = getCanvasKey(url);
+    const key = getCanvasKey(url);
+    const size = Math.sqrt(key.length / 6);
 
     // Determine if ?plot=True is in the URL
     const showsPlot = url.includes("?plot=True");
-
-    // Determine size
-    let size: number | undefined;
-    if (url.includes("image_large")) {
-        const result = getImageHash(key);
-        if (result) {
-            [size, key] = result; // destructure safely
-        }
-    } else {
-        // If not large, infer size from key length
-        size = Math.sqrt(key.length / 6);
-    }
 
     // Return structured state
     return { key, size, showsPlot };
@@ -250,10 +239,12 @@ export async function placePixelExecute(interaction: ButtonInteraction) {
 }
 
 export async function toggleToolExecute(interaction: ButtonInteraction) {
-    
-    const allowed = ensureOwner(interaction, interaction.message, "You cannot toggle tools on this canvas.");
+    const allowed = ensureOwner(
+        interaction,
+        interaction.message,
+        "You cannot toggle tools on this canvas.",
+    );
     if (!allowed) return;
-    
 
     const toolMenu = getStringSelectById(interaction.message, "tool");
     const toolsEnabled = toolMenu?.disabled;

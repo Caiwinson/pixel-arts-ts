@@ -118,11 +118,8 @@ export async function closeExecute(interaction: ButtonInteraction) {
     } else {
         const url = message.embeds?.[0]?.image?.url!;
 
-        let key = getCanvasKey(url);
+        const key = getCanvasKey(url);
 
-        if (url.includes("image_large")) {
-            key = getImageHash(key)![1];
-        }
 
         const embed = createCanvasEmbed(key);
 
