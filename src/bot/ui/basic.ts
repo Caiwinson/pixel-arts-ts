@@ -3,7 +3,7 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import type { ButtonInteraction, StringSelectMenuBuilder } from "discord.js";
 import { createCanvasEmbed, getCanvasKey } from "../utils.js";
 import { appendPixelUpdate, getUserColour } from "../../database.js";
-import { createColourPicker } from "./colour.js";
+import { createColourPickerMenu } from "./colour.js";
 
 // Generate a row of buttons
 function createCanvasRow(
@@ -59,7 +59,11 @@ export async function createColourPickerView(
 ): Promise<
     [ActionRowBuilder<StringSelectMenuBuilder>, ActionRowBuilder<ButtonBuilder>]
 > {
-    const menu = await createColourPicker(defaultHex, "basic", extra_colours);
+    const menu = await createColourPickerMenu(
+        defaultHex,
+        "basic",
+        extra_colours,
+    );
 
     const selectRow =
         new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);

@@ -8,7 +8,7 @@ import {
     StringSelectMenuInteraction,
     StringSelectMenuOptionBuilder,
 } from "discord.js";
-import { createColourPicker, getColourList } from "./colour.js";
+import { createColourPickerMenu, getColourList } from "./colour.js";
 import {
     createCanvasEmbed,
     ensureOwner,
@@ -99,7 +99,7 @@ export async function createAdvanceView(
         yMenu,
     );
 
-    const cMenu = await createColourPicker(
+    const cMenu = await createColourPickerMenu(
         defaultHex,
         "advanced",
         extra_colours,

@@ -281,10 +281,10 @@ async function createEmoji(hex: string): Promise<EmojiEntry> {
 /*              COLOUR PICKER CREATION             */
 /* ------------------------------------------------ */
 
-export async function createColourPicker(
+export async function createColourPickerMenu(
     defaultHex: string,
 
-    uiType: "basic" | "advanced" = "basic",
+    uiType: "basic" | "advanced" | "modal" = "basic",
 
     extra_colours: string[] = [],
 ) {
@@ -365,17 +365,15 @@ export async function createColourPicker(
         if (removed?.data.value) used.delete(removed.data.value);
     }
 
-    options.push(
-        new StringSelectMenuOptionBuilder()
-
-            .setLabel("Custom Colour")
-
-            .setValue("custom")
-
-            .setDescription("Enter a custom hex")
-
-            .setEmoji("<:rgb:1048826497089146941>"),
-    );
+    if (uiType !== "modal") {
+        options.push(
+            new StringSelectMenuOptionBuilder()
+                .setLabel("Custom Colour")
+                .setValue("custom")
+                .setDescription("Enter a custom hex")
+                .setEmoji("<:rgb:1048826497089146941>"),
+        );
+    }
 
     return new StringSelectMenuBuilder()
 
