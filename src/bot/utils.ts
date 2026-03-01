@@ -5,6 +5,7 @@ import {
     Message,
     MessageFlags,
     StringSelectMenuComponent,
+    StringSelectMenuInteraction,
 } from "discord.js";
 import { EMBED_COLOUR, DOMAIN_URL } from "../constants.js";
 import { getImageHash, postImageHash } from "../database.js";
@@ -81,10 +82,11 @@ export function getStringSelectById(
 }
 
 export async function ensureOwner(
-    interaction: ButtonInteraction,
+    interaction: ButtonInteraction | StringSelectMenuInteraction,
     message: Message,
     denyMessage: string,
-) {
+): Promise<boolean> {
+    // Check if the user who triggered the interaction matches the message's stored user
     if (message.interactionMetadata?.user.id !== interaction.user.id) {
         await interaction.reply({
             content: denyMessage,
