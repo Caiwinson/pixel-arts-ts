@@ -6,15 +6,18 @@ import {
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
 } from "discord.js";
-import { getCanvasHistory, getImageHash, undoPixelUpdate } from "../../database.js";
+import {
+    getCanvasHistory,
+    revertLastPixel,
+} from "../../database.js";
 import { createCanvasEmbed, ensureOwner, getCanvasKey } from "../utils.js";
 import { createClosedView } from "./closed.js";
 
 async function resolveCanvasMessage(
     interaction: ButtonInteraction,
-    mode: string,
+    uiMode: string,
 ) {
-    if (mode !== "basic") {
+    if (uiMode !== "basic") {
         return interaction.message;
     }
 
@@ -73,9 +76,9 @@ async function confirmClose(interaction: ButtonInteraction, id: number) {
 
 export async function closeExecute(interaction: ButtonInteraction) {
     const id = Math.floor(Math.random() * 1_000_000);
-    const mode = interaction.customId.split(":")[1];
+    const uiMode = interaction.customId.split(":")[1];
 
-    const message = await resolveCanvasMessage(interaction, mode!);
+    const message = await resolveCanvasMessage(interaction, uiMode!);
     if (!message) return;
 
     const allowed = await ensureOwner(
@@ -108,7 +111,7 @@ export async function closeExecute(interaction: ButtonInteraction) {
     if (!confirmed) return;
 
     // MODE-SPECIFIC ACTION
-    if (mode === "basic") {
+    if (uiMode === "basic") {
         await interaction.message.delete();
 
         await message.edit({
@@ -119,7 +122,6 @@ export async function closeExecute(interaction: ButtonInteraction) {
         const url = message.embeds?.[0]?.image?.url!;
 
         const key = getCanvasKey(url);
-
 
         const embed = createCanvasEmbed(key);
 
@@ -157,7 +159,7 @@ function isRateLimited(userId: string): boolean {
 }
 
 export async function undoCanvasExecute(interaction: ButtonInteraction) {
-    const mode = interaction.customId.split(":")[1];
+    const uiMode = interaction.customId.split(":")[1];
 
     if (isRateLimited(interaction.user.id)) {
         await interaction.reply({
@@ -169,8 +171,8 @@ export async function undoCanvasExecute(interaction: ButtonInteraction) {
     }
 
     const message =
-        mode === "basic"
-            ? await resolveCanvasMessage(interaction, mode)
+        uiMode === "basic"
+            ? await resolveCanvasMessage(interaction, uiMode)
             : interaction.message;
 
     if (!message) return;
@@ -183,7 +185,7 @@ export async function undoCanvasExecute(interaction: ButtonInteraction) {
         return;
     }
 
-    const key = undoPixelUpdate(message.id);
+    const key = revertLastPixel(message.id);
 
     if (!key) {
         await interaction.reply({
@@ -198,7 +200,7 @@ export async function undoCanvasExecute(interaction: ButtonInteraction) {
 
     const embed = createCanvasEmbed(key, showsPlot);
 
-    if (mode === "basic") {
+    if (uiMode === "basic") {
         await interaction.deferUpdate();
         await message.edit({ embeds: [embed] });
     } else {

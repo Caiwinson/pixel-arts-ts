@@ -4,7 +4,6 @@ import fs from "fs";
 import crypto from "crypto";
 import { DB_PATH } from "./constants.js";
 
-
 // Ensure the data directory exists
 const dbDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dbDir)) {
@@ -37,6 +36,8 @@ function initDb() {
             readable_time TEXT NOT NULL,
             PRIMARY KEY (message_id, row_id)
         );
+
+        CREATE INDEX IF NOT EXISTS idx_timelapse_message_id ON timelapse(message_id);
 
         CREATE TABLE IF NOT EXISTS colour (
             user_id TEXT PRIMARY KEY,
@@ -178,7 +179,7 @@ const appendPixelUpdateTx = db.transaction(
         );
     },
 );
-export function appendPixelUpdate(
+export function recordPixelUpdate(
     messageId: string,
     fkey: string,
     dkey: string | null | undefined,
@@ -207,7 +208,7 @@ const deleteLatestRowStmt = db.prepare(`
     )
 `);
 
-export function undoPixelUpdate(messageId: string): string | null {
+export function revertLastPixel(messageId: string): string | null {
     let rows = getCanvasHistory(messageId);
 
     if (rows.length === 0) {
@@ -283,7 +284,7 @@ const upsertUserColourStmt = db.prepare(`
     DO UPDATE SET hex_code = excluded.hex_code
 `);
 
-export function postUserColour(userId: string, hexCode: string): void {
+export function setUserColour(userId: string, hexCode: string): void {
     const intValue = parseInt(hexCode, 16);
 
     upsertUserColourStmt.run(userId, intValue);
@@ -307,7 +308,7 @@ const incrementCanvasCountStmt = db.prepare(`
     DO UPDATE SET count = count + 1
 `);
 
-export function appendCanvasCount(): void {
+export function incrementCanvasCount(): void {
     incrementCanvasCountStmt.run();
 }
 
@@ -320,7 +321,7 @@ const insertImageHashStmt = db.prepare(`
     VALUES (?, ?)
 `);
 
-export function postImageHash(key: string, size: number): string {
+export function saveImageHash(key: string, size: number): string {
     const combinedKey = `${size}-${key}`;
     const hash = crypto.createHash("sha256").update(combinedKey).digest("hex");
 
@@ -362,7 +363,7 @@ const selectVoteStmt = db.prepare(`
     SELECT timestamp FROM vote WHERE user_id = ?
 `);
 
-export function hasVotedDb(userId: string): boolean {
+export function hasUserVoted(userId: string): boolean {
     const row = selectVoteStmt.get(userId) as { timestamp: number } | undefined;
 
     if (!row) {

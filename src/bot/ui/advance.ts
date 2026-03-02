@@ -16,7 +16,7 @@ import {
     getStringSelectById,
 } from "../utils.js";
 import {
-    appendPixelUpdate,
+    recordPixelUpdate,
     getImageHash,
     getUserColour,
 } from "../../database.js";
@@ -170,7 +170,7 @@ export async function rowOptionsExecute(
     await interaction.deferUpdate();
 }
 
-export function getCanvasState(messageId: Message) {
+export function parseCanvasState(messageId: Message) {
     // Safely get URL from embed
     const url = messageId.embeds?.[0]?.image?.url;
     if (!url) return null; // no image, abort
@@ -187,7 +187,7 @@ export function getCanvasState(messageId: Message) {
 }
 
 export async function placePixelExecute(interaction: ButtonInteraction) {
-    const canvasState = getCanvasState(interaction.message);
+    const canvasState = parseCanvasState(interaction.message);
     if (!canvasState) return;
 
     const { key: keyStr, size, showsPlot } = canvasState;
@@ -230,7 +230,7 @@ export async function placePixelExecute(interaction: ButtonInteraction) {
         ),
     });
 
-    appendPixelUpdate(
+    recordPixelUpdate(
         interaction.message.id,
         newKey,
         `${num}:${colour}`,

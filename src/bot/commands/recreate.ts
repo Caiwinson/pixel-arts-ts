@@ -7,11 +7,11 @@ import {
 
 import { createCanvasView, createColourPickerView } from "../ui/basic.js";
 import { createAdvanceView } from "../ui/advance.js";
-import { createCanvasEmbed} from "../utils.js";
+import { createCanvasEmbed } from "../utils.js";
 
 import {
-    appendCanvasCount,
-    appendPixelUpdate,
+    incrementCanvasCount,
+    recordPixelUpdate,
     getUserColour,
 } from "../../database.js";
 
@@ -28,7 +28,7 @@ export const recreateCommandData = new SlashCommandBuilder()
                 option
                     .setName("image")
                     .setDescription("The image you wish to recreate")
-                    .setRequired(true)
+                    .setRequired(true),
             )
             .addIntegerOption((option) =>
                 option
@@ -41,14 +41,14 @@ export const recreateCommandData = new SlashCommandBuilder()
                         { name: "15x15", value: 15 },
                         { name: "20x20 (vote only)", value: 20 },
                         { name: "25x25 (vote only)", value: 25 },
-                    )
+                    ),
             )
             .addBooleanOption((option) =>
                 option
                     .setName("enable_tools")
                     .setDescription("Enable or disable tools (15x15 only)")
-                    .setRequired(false)
-            )
+                    .setRequired(false),
+            ),
     );
 
 export async function recreateCommandExecute(
@@ -78,8 +78,7 @@ export async function recreateCommandExecute(
     // ---------- Options ----------
     const attachment = interaction.options.getAttachment("image", true);
     const size = interaction.options.getInteger("size") || 5;
-    const enableTools =
-        interaction.options.getBoolean("enable_tools") ?? true;
+    const enableTools = interaction.options.getBoolean("enable_tools") ?? true;
 
     if (!attachment.contentType?.startsWith("image/")) {
         return interaction.reply({
@@ -151,8 +150,8 @@ export async function recreateCommandExecute(
                 components: await createColourPickerView(defaultHex),
             });
 
-            appendPixelUpdate(message.id, key, null, interaction.user.id);
-            appendCanvasCount();
+            recordPixelUpdate(message.id, key, null, interaction.user.id);
+            incrementCanvasCount();
         } else {
             await interaction.reply({
                 content: `${interaction.user} has created a canvas.`,
@@ -163,14 +162,14 @@ export async function recreateCommandExecute(
                     1,
                     defaultHex,
                     undefined,
-                    enableTools
+                    enableTools,
                 ),
             });
 
             const message = await interaction.fetchReply();
 
-            appendPixelUpdate(message.id, key, null, interaction.user.id);
-            appendCanvasCount();
+            recordPixelUpdate(message.id, key, null, interaction.user.id);
+            incrementCanvasCount();
         }
     } catch (error) {
         console.error("Image processing error:", error);

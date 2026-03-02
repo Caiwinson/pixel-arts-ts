@@ -8,7 +8,7 @@ import {
     StringSelectMenuInteraction,
 } from "discord.js";
 import { EMBED_COLOUR, DOMAIN_URL } from "../constants.js";
-import { getImageHash, postImageHash } from "../database.js";
+import { getImageHash, saveImageHash } from "../database.js";
 
 export function hexToInt(hex: string): number {
     // Remove leading "#" if present
@@ -33,7 +33,7 @@ export function createCanvasEmbed(key: string, showPlot = false): EmbedBuilder {
     if (size === 5 || size === 10 || size === 15) {
         url = `${DOMAIN_URL}/image/${key}.png`;
     } else if (size === 20 || size === 25) {
-        const imgHash = postImageHash(key, size);
+        const imgHash = saveImageHash(key, size);
         url = `${DOMAIN_URL}/image_large/${imgHash}.png`;
     } else {
         throw new Error("Invalid canvas size");

@@ -9,8 +9,8 @@ import { createCanvasView, createColourPickerView } from "../ui/basic.js";
 import { createCanvasEmbed } from "../utils.js";
 import { COLOUR_OPTION } from "../../constants.js";
 import {
-    appendCanvasCount,
-    appendPixelUpdate,
+    incrementCanvasCount,
+    recordPixelUpdate,
     getUserColour,
 } from "../../database.js";
 import { createColourModal } from "../ui/colour.js";
@@ -88,11 +88,11 @@ export async function createCommandExecute(
         }
     }
 
-    let BaseColour = interaction.options.getString("colour") || "ffffff";
+    let baseColour = interaction.options.getString("colour") || "ffffff";
     const size = interaction.options.getInteger("size") || 5;
     const enableTools = interaction.options.getBoolean("enable_tools") ?? true;
 
-    if (BaseColour === "custom") {
+    if (baseColour === "custom") {
         // id = random number
         const id = Math.floor(Math.random() * 1000000);
         const modal = createColourModal(id);
@@ -121,7 +121,7 @@ export async function createCommandExecute(
                 return;
             }
 
-            BaseColour = hexInput.toLowerCase();
+            baseColour = hexInput.toLowerCase();
             interaction = submitted;
         } catch {
             if (hasSubmitted) {
@@ -133,7 +133,7 @@ export async function createCommandExecute(
         }
     }
 
-    const key = BaseColour.repeat(size ** 2);
+    const key = baseColour.repeat(size ** 2);
     const embed = createCanvasEmbed(key, size > 5);
     const defaultHex = getUserColour(interaction.user.id);
 
@@ -152,19 +152,26 @@ export async function createCommandExecute(
             components: await createColourPickerView(defaultHex),
         });
 
-        appendPixelUpdate(message.id, key, null, interaction.user.id);
-        appendCanvasCount();
+        recordPixelUpdate(message.id, key, null, interaction.user.id);
+        incrementCanvasCount();
     } else {
         await interaction.reply({
             content: `${interaction.user} has created a canvas.`,
             embeds: [embed],
-            components: await createAdvanceView(size, 1, 1, defaultHex, undefined, enableTools),
+            components: await createAdvanceView(
+                size,
+                1,
+                1,
+                defaultHex,
+                undefined,
+                enableTools,
+            ),
             withResponse: true,
         });
 
         const message = await interaction.fetchReply();
 
-        appendPixelUpdate(message.id, key, null, interaction.user.id);
-        appendCanvasCount();
+        recordPixelUpdate(message.id, key, null, interaction.user.id);
+        incrementCanvasCount();
     }
 }

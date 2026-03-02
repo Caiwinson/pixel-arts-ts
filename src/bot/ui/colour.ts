@@ -15,7 +15,7 @@ import {
 
 import { application } from "../bot.js";
 import { COLOUR_OPTION } from "../../constants.js";
-import { postUserColour } from "../../database.js";
+import { setUserColour } from "../../database.js";
 import { createColourPickerView } from "./basic.js";
 import { createAdvanceView, getUserSelection } from "./advance.js";
 import { getStringSelectById } from "../utils.js";
@@ -420,7 +420,7 @@ export async function colourMenuExecute(
     const value = interaction.values[0]!;
 
     if (value !== "custom") {
-        postUserColour(interaction.user.id, value);
+        setUserColour(interaction.user.id, value);
 
         await interaction.deferUpdate();
 
@@ -458,7 +458,7 @@ export async function colourMenuExecute(
         return;
     }
 
-    postUserColour(interaction.user.id, hex);
+    setUserColour(interaction.user.id, hex);
 
     await submitted.deferUpdate();
 

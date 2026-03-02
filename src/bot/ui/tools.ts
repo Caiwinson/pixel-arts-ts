@@ -15,8 +15,8 @@ import {
     getStringSelectById,
 } from "../utils.js";
 import { createColourPickerMenu, getColourList } from "./colour.js";
-import { appendPixelUpdate, getUserColour } from "../../database.js";
-import { getCanvasState } from "./advance.js";
+import { recordPixelUpdate, getUserColour } from "../../database.js";
+import { parseCanvasState } from "./advance.js";
 
 export function createToolMenu(
     showsTool: boolean = false,
@@ -199,7 +199,7 @@ async function updateCanvas(
         embeds: [embeds],
     });
 
-    appendPixelUpdate(
+    recordPixelUpdate(
         interaction.message.id,
         key,
         deltas.join(","),
@@ -223,7 +223,7 @@ function setPixel(
 }
 
 async function handleLine(interaction: StringSelectMenuInteraction) {
-    const canvasState = getCanvasState(interaction.message);
+    const canvasState = parseCanvasState(interaction.message);
     if (!canvasState) return; // exit if null
 
     const { key, size, showsPlot } = canvasState; // now safe
@@ -273,7 +273,7 @@ async function handleLine(interaction: StringSelectMenuInteraction) {
 }
 
 async function handleRectangle(interaction: StringSelectMenuInteraction) {
-    const canvasState = getCanvasState(interaction.message);
+    const canvasState = parseCanvasState(interaction.message);
     if (!canvasState) return;
 
     const { key, size, showsPlot } = canvasState;
@@ -310,7 +310,7 @@ async function handleRectangle(interaction: StringSelectMenuInteraction) {
 async function handleRectangleOutline(
     interaction: StringSelectMenuInteraction,
 ) {
-    const canvasState = getCanvasState(interaction.message);
+    const canvasState = parseCanvasState(interaction.message);
     if (!canvasState) return;
 
     const { key, size, showsPlot } = canvasState;
@@ -386,7 +386,7 @@ async function BucketFillModal(
 }
 
 async function handleBucketFill(interaction: StringSelectMenuInteraction) {
-    const canvasState = getCanvasState(interaction.message);
+    const canvasState = parseCanvasState(interaction.message);
     if (!canvasState) return;
 
     const { key, size, showsPlot } = canvasState;
@@ -487,7 +487,7 @@ async function ReplaceColourModal(
 }
 
 async function handleReplaceColour(interaction: StringSelectMenuInteraction) {
-    const canvasState = getCanvasState(interaction.message);
+    const canvasState = parseCanvasState(interaction.message);
     if (!canvasState) return;
 
     const { key, showsPlot } = canvasState;
