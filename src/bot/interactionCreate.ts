@@ -18,6 +18,7 @@ import {
 } from "./ui/closed.js";
 import { placePixelExecute, rowOptionsExecute, toggleToolExecute } from "./ui/advance.js";
 import { toolExecute } from "./ui/tools.js";
+import { recreateCommandExecute } from "./commands/recreate.js";
 
 // Dispatch maps
 const buttonHandlers: Record<string, (i: ButtonInteraction) => Promise<void>> =
@@ -52,6 +53,9 @@ const commandHandlers: Record<
     (i: ChatInputCommandInteraction) => Promise<void>
 > = {
     create: createCommandExecute as (
+        i: ChatInputCommandInteraction,
+    ) => Promise<void>,
+    recreate: recreateCommandExecute as (
         i: ChatInputCommandInteraction,
     ) => Promise<void>,
 };

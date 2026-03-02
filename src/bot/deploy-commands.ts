@@ -1,9 +1,10 @@
 import { REST, Routes } from "discord.js";
 import { createCommandData as createCommand } from "./commands/create.js";
+import { recreateCommandData as recreateCommand } from "./commands/recreate.js";
 import { DISCORD_TOKEN } from "../constants.js";
 import { application } from "./bot.js";
 
-const commands = [createCommand.toJSON()];
+const commands = [createCommand.toJSON(), recreateCommand.toJSON()];
 
 const rest = new REST({ version: "10" }).setToken(DISCORD_TOKEN!);
 
