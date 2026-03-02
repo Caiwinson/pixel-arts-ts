@@ -1,183 +1,193 @@
 <!doctype html>
 <html>
-  <head>
-    <title>Preview</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        background-size: 150% 150%;
-        background-position: center;
-        background: radial-gradient(#0b3d91, #1f1f1f);
-        color: white;
-        animation: fadeOut 1s cubic-bezier(0, 0, 0, 1.5);
-        margin: 0 auto;
-        padding: 20px;
-        display: flex; /* Add flex display */
-        align-items: center; /* Align vertically */
-        justify-content: center; /* Center horizontally */
-        flex-direction: row;
-        height: 100vh;
-      }
+    <head>
+        <title>Preview</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                background-size: 150% 150%;
+                background-position: center;
+                background: radial-gradient(#0b3d91, #1f1f1f);
+                color: white;
+                animation: fadeOut 1s cubic-bezier(0, 0, 0, 1.5);
+                margin: 0 auto;
+                padding: 20px;
+                display: flex; /* Add flex display */
+                align-items: center; /* Align vertically */
+                justify-content: center; /* Center horizontally */
+                flex-direction: row;
+                height: 100vh;
+            }
 
-      @keyframes fadeOut {
-        from {
-          opacity: 0;
-          transform: translateY(-5vh);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
+            @keyframes fadeOut {
+                from {
+                    opacity: 0;
+                    transform: translateY(-5vh);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
 
-      #preview {
-        width: 40vw; /* 40% of the frame width */
-        height: 40vw; /* Maintain aspect ratio */
-      }
+            #preview {
+                width: 40vw; /* 40% of the frame width */
+                height: 40vw; /* Maintain aspect ratio */
+            }
 
-      #menu {
-        width: 40vw;
-        height: 40vw; /* Auto height to fit content */
-        margin-left: 20px;
-        display: flex; /* Added flex display */
-        flex-direction: column; /* Menu items stacked vertically */
-        align-items: center; /* Center horizontally */
-        justify-content: center; /* Center vertically */
-      }
+            #menu {
+                width: 40vw;
+                height: 40vw; /* Auto height to fit content */
+                margin-left: 20px;
+                display: flex; /* Added flex display */
+                flex-direction: column; /* Menu items stacked vertically */
+                align-items: center; /* Center horizontally */
+                justify-content: center; /* Center vertically */
+            }
 
-      #speedSlider {
-        width: 80%; /* Take full width of the menu */
-        background-color: #333;
-        border: none;
-        height: 20px;
-        border-radius: 5px;
-      }
+            #speedSlider {
+                width: 80%; /* Take full width of the menu */
+                background-color: #333;
+                border: none;
+                height: 20px;
+                border-radius: 5px;
+            }
 
-      #speedSlider::-webkit-slider-thumb {
-        appearance: none;
-        width: 20px;
-        height: 20px;
-        background-color: #fff;
-        border-radius: 50%;
-        cursor: pointer;
-      }
+            #speedSlider::-webkit-slider-thumb {
+                appearance: none;
+                width: 20px;
+                height: 20px;
+                background-color: #fff;
+                border-radius: 50%;
+                cursor: pointer;
+            }
 
-      #download {
-        background-color: #ffa500;
-        color: white;
-        border: none;
-        border-radius: 10px; /* Increase the border radius for button */
-        padding: 15px 30px; /* Increase padding for button */
-        cursor: pointer;
-        transition:
-          background-color 0.3s,
-          transform 0.2s;
-        margin-top: 20px; /* Add margin to separate from slider */
-        font-family: Arial, sans-serif; /* Set font to Arial */
-        font-size: 16px; /* Increase font size */
-      }
+            #download {
+                background-color: #ffa500;
+                color: white;
+                border: none;
+                border-radius: 10px; /* Increase the border radius for button */
+                padding: 15px 30px; /* Increase padding for button */
+                cursor: pointer;
+                transition:
+                    background-color 0.3s,
+                    transform 0.2s;
+                margin-top: 20px; /* Add margin to separate from slider */
+                font-family: Arial, sans-serif; /* Set font to Arial */
+                font-size: 16px; /* Increase font size */
+            }
 
-      #download:hover {
-        background-color: white; /* White background color on hover */
-        color: #ffa500; /* Orange text color on hover */
-        transform: scale(1.1); /* Enlarge the button on hover */
-      }
+            #download:hover {
+                background-color: white; /* White background color on hover */
+                color: #ffa500; /* Orange text color on hover */
+                transform: scale(1.1); /* Enlarge the button on hover */
+            }
 
-      #speed {
-        margin-top: 10px; /* Add margin to separate from slider */
-        font-family: Arial, sans-serif; /* Set font to Arial */
-      }
+            #speed {
+                margin-top: 10px; /* Add margin to separate from slider */
+                font-family: Arial, sans-serif; /* Set font to Arial */
+            }
 
-      /* Scrollbar styles */
-      ::-webkit-scrollbar {
-        width: 10px;
-        height: 10px;
-      }
-      ::-webkit-scrollbar-track {
-        background-color: transparent;
-      }
-      ::-webkit-scrollbar-thumb {
-        border-radius: 10px;
-      }
-      ::-webkit-scrollbar-corner {
-        background-color: transparent;
-      }
-      ::-webkit-scrollbar-thumb {
-        background-color: transparent;
-      }
-    </style>
-  </head>
-  <body>
-    <video src="/preview/{{ code }}" autoplay muted loop id="preview"></video>
-    <div id="menu">
-      <input type="range" id="speedSlider" min="1" step="1" />
-      <h1 id="speed">1x</h1>
-      <button id="download">Download</button>
-    </div>
-    <script>
-      const video = document.getElementById("preview");
-      const speedSlider = document.getElementById("speedSlider");
+            /* Scrollbar styles */
+            ::-webkit-scrollbar {
+                width: 10px;
+                height: 10px;
+            }
+            ::-webkit-scrollbar-track {
+                background-color: transparent;
+            }
+            ::-webkit-scrollbar-thumb {
+                border-radius: 10px;
+            }
+            ::-webkit-scrollbar-corner {
+                background-color: transparent;
+            }
+            ::-webkit-scrollbar-thumb {
+                background-color: transparent;
+            }
+        </style>
+    </head>
+    <body>
+        <video
+            src="/preview/{{ code }}"
+            autoplay
+            muted
+            loop
+            id="preview"
+        ></video>
+        <div id="menu">
+            <input type="range" id="speedSlider" min="1" step="1" />
+            <h1 id="speed">1x</h1>
+            <button id="download">Download</button>
+        </div>
+        <script>
+            const video = document.getElementById("preview");
+            const speedSlider = document.getElementById("speedSlider");
 
-      // When video metadata is loaded, set max playback rate
-      video.addEventListener("loadedmetadata", () => {
-        // Max speed = total video duration (so full video plays in 1 second)
-        speedSlider.max = Math.ceil(video.duration);
-        speedSlider.value = 1; // start at normal speed
-        updateSpeed();
-      });
+            // When video metadata is loaded, set max playback rate
+            video.addEventListener("loadedmetadata", () => {
+                // Max speed = total video duration (so full video plays in 1 second)
+                speedSlider.max = Math.ceil(video.duration);
+                speedSlider.value = 1; // start at normal speed
+                updateSpeed();
+            });
 
-      speedSlider.addEventListener("input", () => {
-        const speed = Number(speedSlider.value);
-        video.playbackRate = speed;
-        updateSpeed();
-      });
+            speedSlider.addEventListener("input", () => {
+                const speed = Number(speedSlider.value);
+                video.playbackRate = speed;
+                updateSpeed();
+            });
 
-      document.getElementById("download").addEventListener("click", () => {
-        const a = document.createElement("a");
-        a.href = "/download/{{ code }}-" + speedSlider.value;
-        a.download = "video.mp4"; // Set the desired filename for download
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      });
+            document
+                .getElementById("download")
+                .addEventListener("click", () => {
+                    const a = document.createElement("a");
+                    const safeCode = encodeURIComponent("{{ code }}");
+                    a.href = "/download/" + safeCode + "-" + speedSlider.value;
+                    a.download = "video.mp4"; // Set the desired filename for download
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                });
 
-      function updateSpeed() {
-        const speed = video.playbackRate;
-        const duration = video.duration / speed;
+            function updateSpeed() {
+                const speed = video.playbackRate;
+                const duration = video.duration / speed;
 
-        const seconds = Math.floor(duration % 60);
-        const minutes = Math.floor((duration / 60) % 60);
-        const hours = Math.floor(duration / 3600);
+                const seconds = Math.floor(duration % 60);
+                const minutes = Math.floor((duration / 60) % 60);
+                const hours = Math.floor(duration / 3600);
 
-        let time = hours > 0 ? `${hours}:` : "";
-        time += minutes < 10 ? `0${minutes}:` : `${minutes}:`;
-        time += seconds < 10 ? `0${seconds}` : `${seconds}`;
+                let time = hours > 0 ? `${hours}:` : "";
+                time += minutes < 10 ? `0${minutes}:` : `${minutes}:`;
+                time += seconds < 10 ? `0${seconds}` : `${seconds}`;
 
-        document.getElementById("speed").innerHTML = `${speed}x (${time})`;
-      }
+                document.getElementById("speed").innerHTML =
+                    `${speed}x (${time})`;
+            }
 
-      // Responsive resize function
-      function resize() {
-        const width = window.innerWidth;
-        const height = window.innerHeight;
-        if (width > height) {
-          video.style.width = "40vw";
-          video.style.height = "40vw";
-          menu.style.width = "40vw";
-          menu.style.height = "40vw";
-          document.body.style.flexDirection = "row";
-        } else {
-          video.style.width = "40vh";
-          video.style.height = "40vh";
-          menu.style.width = "40vh";
-          menu.style.height = "20vh";
-          document.body.style.flexDirection = "column";
-        }
-      }
+            // Responsive resize function
+            function resize() {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                if (width > height) {
+                    video.style.width = "40vw";
+                    video.style.height = "40vw";
+                    menu.style.width = "40vw";
+                    menu.style.height = "40vw";
+                    document.body.style.flexDirection = "row";
+                } else {
+                    video.style.width = "40vh";
+                    video.style.height = "40vh";
+                    menu.style.width = "40vh";
+                    menu.style.height = "20vh";
+                    document.body.style.flexDirection = "column";
+                }
+            }
 
-      window.addEventListener("resize", resize);
-      resize();
-    </script>
-  </body>
+            window.addEventListener("resize", resize);
+            resize();
+        </script>
+    </body>
 </html>
