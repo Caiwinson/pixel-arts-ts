@@ -54,6 +54,12 @@ export const createCommandData = new SlashCommandBuilder()
                         { name: "20x20 (vote only)", value: 20 },
                         { name: "25x25 (vote only)", value: 25 },
                     ),
+            )
+            .addBooleanOption((option) =>
+                option
+                    .setName("enable_tools")
+                    .setDescription("Enable or disable tools")
+                    .setRequired(false),
             ),
     );
 
@@ -84,6 +90,7 @@ export async function createCommandExecute(
 
     let BaseColour = interaction.options.getString("colour") || "ffffff";
     const size = interaction.options.getInteger("size") || 5;
+    const enableTools = interaction.options.getBoolean("enable_tools") ?? true;
 
     if (BaseColour === "custom") {
         // id = random number
@@ -151,8 +158,8 @@ export async function createCommandExecute(
         await interaction.reply({
             content: `${interaction.user} has created a canvas.`,
             embeds: [embed],
-            components: await createAdvanceView(size, 1, 1, defaultHex),
-            withResponse: true, 
+            components: await createAdvanceView(size, 1, 1, defaultHex, undefined, enableTools),
+            withResponse: true,
         });
 
         const message = await interaction.fetchReply();
