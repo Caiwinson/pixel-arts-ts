@@ -23,6 +23,9 @@ export const EMBED_COLOUR = 5793266;
 export const DATA_DIR = path.join(process.cwd(), "data");
 export const DB_PATH = path.join(DATA_DIR, "data.db");
 export const PREVIEW_PATH = path.join(DATA_DIR, "cache", "preview");
+export const NO_PLOT_DIR = path.join(DATA_DIR, "cache", "no_plot");
+export const PLOT_DIR = path.join(DATA_DIR, "cache", "plot");
+export const PLOT_OVERLAY_PATH = path.join(process.cwd(), "static", "plot.png");
 
 // Ensure directories exist
 [DATA_DIR, PREVIEW_PATH].forEach((dir) => {
