@@ -63,8 +63,8 @@ const toolMap: Record<string, any> = {
     line: handleLine,
     rectangle: handleRectangle,
     outline: handleRectangleOutline,
-    // bucket: BucketFillModal,
-    // replace: ReplaceColourModal,
+    bucket: handleBucketFill,
+    replace: handleReplaceColour,
     plot: handlePlot,
 };
 
@@ -343,6 +343,197 @@ async function handleRectangleOutline(
         setPixel(pixels, size, minX, y, colour, deltas);
         setPixel(pixels, size, maxX, y, colour, deltas);
     }
+
+    const newKey = pixels.join("");
+    await updateCanvas(interaction, newKey, deltas, showsPlot);
+}
+
+async function BucketFillModal(
+    id: number,
+    interaction: StringSelectMenuInteraction,
+) {
+    const modal = new ModalBuilder()
+        .setCustomId(`bm:${id}`)
+        .setTitle("Bucket Fill Tool");
+
+    const fillInput = new TextInputBuilder()
+        .setCustomId("fill")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setPlaceholder("1,1")
+        .setMinLength(3)
+        .setMaxLength(5);
+
+    const fillLabel = new LabelBuilder()
+        .setLabel("Fill from:")
+        .setTextInputComponent(fillInput);
+
+    const colourList = getColourList(
+        getStringSelectById(interaction.message, "cc:advanced")!,
+    );
+
+    const colour = getUserColour(interaction.user.id);
+
+    const colourLabel = new LabelBuilder()
+        .setLabel("Pick a colour")
+        .setStringSelectMenuComponent(
+            await createColourPickerMenu(colour, "modal", colourList),
+        );
+
+    modal.addLabelComponents(fillLabel, colourLabel);
+
+    return modal;
+}
+
+async function handleBucketFill(interaction: StringSelectMenuInteraction) {
+    const canvasState = getCanvasState(interaction.message);
+    if (!canvasState) return;
+
+    const { key, size, showsPlot } = canvasState;
+    if (!key) return;
+
+    const id = Math.floor(Math.random() * 1_000_000);
+    const modal = await BucketFillModal(id, interaction);
+
+    await interaction.showModal(modal);
+
+    let submitted;
+
+    try {
+        submitted = await interaction.awaitModalSubmit({
+            filter: (i) =>
+                i.user.id === interaction.user.id && i.customId === `bm:${id}`,
+            time: 60_000,
+        });
+    } catch {
+        return;
+    }
+
+    const fill = submitted.fields.getTextInputValue("fill");
+    const colour = submitted.fields.getStringSelectValues("cc:modal")[0]!;
+
+    const startCoords = parseCoords(fill, size);
+
+    if (!startCoords) {
+        await submitted.reply({
+            content: "Invalid coordinates.",
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+
+    await submitted.deferUpdate();
+
+    const [startX, startY] = startCoords;
+    const pixels = key.match(/.{6}/g)!;
+    const targetColour = pixels[startY * size + startX]!;
+
+    if (targetColour === colour) return;
+
+    const deltas: string[] = [];
+    const queue: [number, number][] = [[startX, startY]];
+    const seen = new Set<number>();
+
+    while (queue.length > 0) {
+        const [x, y] = queue.shift()!;
+        if (x < 0 || x >= size || y < 0 || y >= size) continue;
+
+        const idx = y * size + x;
+        if (seen.has(idx)) continue;
+        if (pixels[idx] !== targetColour) continue;
+
+        seen.add(idx);
+        setPixel(pixels, size, x, y, colour, deltas);
+
+        queue.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    }
+
+    const newKey = pixels.join("");
+    await updateCanvas(interaction, newKey, deltas, showsPlot);
+}
+
+async function ReplaceColourModal(
+    id: number,
+    interaction: StringSelectMenuInteraction,
+) {
+    const modal = new ModalBuilder()
+        .setCustomId(`rm:${id}`)
+        .setTitle("Replace Colour Tool");
+
+    const colourList = getColourList(
+        getStringSelectById(interaction.message, "cc:advanced")!,
+    );
+    const colour = getUserColour(interaction.user.id);
+
+    const oldLabel = new LabelBuilder()
+        .setLabel("Pick a colour to replace")
+        .setStringSelectMenuComponent(
+            (
+                await createColourPickerMenu("000000", "modal", colourList)
+            ).setCustomId("old"),
+        );
+
+    const newLabel = new LabelBuilder()
+        .setLabel("Pick a new colour")
+        .setStringSelectMenuComponent(
+            (
+                await createColourPickerMenu(colour, "modal", colourList)
+            ).setCustomId("new"),
+        );
+
+    modal.addLabelComponents(oldLabel, newLabel);
+
+    return modal;
+}
+
+async function handleReplaceColour(interaction: StringSelectMenuInteraction) {
+    const canvasState = getCanvasState(interaction.message);
+    if (!canvasState) return;
+
+    const { key, showsPlot } = canvasState;
+    if (!key) return;
+
+    const id = Math.floor(Math.random() * 1_000_000);
+    const modal = await ReplaceColourModal(id, interaction);
+
+    await interaction.showModal(modal);
+
+    let submitted;
+
+    try {
+        submitted = await interaction.awaitModalSubmit({
+            filter: (i) =>
+                i.user.id === interaction.user.id && i.customId === `rm:${id}`,
+            time: 60_000,
+        });
+    } catch {
+        return;
+    }
+
+    const oldColour = submitted.fields.getStringSelectValues("old")[0]!;
+    const newColour = submitted.fields.getStringSelectValues("new")[0]!;
+
+    if (oldColour === newColour) {
+        await submitted.reply({
+            content: "Colours are the same.",
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+
+    await submitted.deferUpdate();
+
+    const pixels = key.match(/.{6}/g)!;
+    const deltas: string[] = [];
+
+    for (let i = 0; i < pixels.length; i++) {
+        if (pixels[i] === oldColour) {
+            pixels[i] = newColour;
+            deltas.push(`${i}:${newColour}`);
+        }
+    }
+
+    if (deltas.length === 0) return;
 
     const newKey = pixels.join("");
     await updateCanvas(interaction, newKey, deltas, showsPlot);
