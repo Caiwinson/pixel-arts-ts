@@ -14,6 +14,11 @@ app.use("/", imageRouter);
 app.use("/", videoRouter);
 app.use("/", voteRouter)
 
+app.get("/timelapse/:code", (req, res) => {
+    // Serve timelapse.html from ./public
+    res.sendFile(path.join(__dirname, "public", "timelapse.html"));
+});
+
 // Catch-all to debug unmatched routes
 app.use((req, res) => {
     console.log("Unmatched route:", req.method, req.path);

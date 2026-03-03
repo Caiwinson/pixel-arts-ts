@@ -122,34 +122,38 @@
             <button id="download">Download</button>
         </div>
         <script>
+            // Get the 'code' from the URL
+            const code = window.location.pathname.split("/").pop();
+
             const video = document.getElementById("preview");
             const speedSlider = document.getElementById("speedSlider");
 
-            // When video metadata is loaded, set max playback rate
-            video.addEventListener("loadedmetadata", () => {
-                // Max speed = total video duration (so full video plays in 1 second)
-                speedSlider.max = Math.ceil(video.duration);
-                speedSlider.value = 1; // start at normal speed
-                updateSpeed();
-            });
+            video.src = `/preview/${code}`; // dynamic video source
 
-            speedSlider.addEventListener("input", () => {
-                const speed = Number(speedSlider.value);
-                video.playbackRate = speed;
-                updateSpeed();
-            });
-
+            // Download button
             document
                 .getElementById("download")
                 .addEventListener("click", () => {
                     const a = document.createElement("a");
-                    const safeCode = encodeURIComponent("{{ code }}");
-                    a.href = "/download/" + safeCode + "-" + speedSlider.value;
-                    a.download = "video.mp4"; // Set the desired filename for download
+                    const safeCode = encodeURIComponent(code);
+                    a.href = `/download/${safeCode}-${speedSlider.value}`;
+                    a.download = "video.mp4";
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
                 });
+
+            // Speed controls
+            video.addEventListener("loadedmetadata", () => {
+                speedSlider.max = Math.ceil(video.duration);
+                speedSlider.value = 1;
+                updateSpeed();
+            });
+
+            speedSlider.addEventListener("input", () => {
+                video.playbackRate = Number(speedSlider.value);
+                updateSpeed();
+            });
 
             function updateSpeed() {
                 const speed = video.playbackRate;
@@ -167,7 +171,8 @@
                     `${speed}x (${time})`;
             }
 
-            // Responsive resize function
+            // Responsive layout
+            const menu = document.getElementById("menu");
             function resize() {
                 const width = window.innerWidth;
                 const height = window.innerHeight;
@@ -185,7 +190,6 @@
                     document.body.style.flexDirection = "column";
                 }
             }
-
             window.addEventListener("resize", resize);
             resize();
         </script>
