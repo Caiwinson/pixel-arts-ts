@@ -5,17 +5,16 @@ import fs from "fs";
 export const ENV = {
     discord_token: process.env.DISCORD_TOKEN,
     topggToken: process.env.TOPGG_TOKEN,
-    dblToken: process.env.DBL_TOKEN,
     domainUrl: process.env.DOMAIN_URL,
-    databaseUrl: process.env.DATABASE_URL,
-    discordsMeToken: process.env.DISCORDS_ME_TOKEN,
+    topgg_webhook: process.env.TOPGG_WEBHOOK,
+    webhook_url: process.env.WEBHOOK_URL,
 };
 
 // Individual constants for convenience
 export const DISCORD_TOKEN = ENV.discord_token;
 export const TOPGG_API_TOKEN = ENV.topggToken;
-export const DBL_API_TOKEN = ENV.dblToken;
-export const DISCORDS_ME_TOKEN = ENV.discordsMeToken;
+export const TOPGG_WEBHOOK = ENV.topgg_webhook;
+export const WEBHOOK_URL = ENV.webhook_url;
 export const DOMAIN_URL = ENV.domainUrl;
 export const EMBED_COLOUR = 5793266;
 

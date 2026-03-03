@@ -4,6 +4,7 @@ import * as crypto from "crypto";
 import { NO_PLOT_DIR, PLOT_DIR, PLOT_OVERLAY_PATH } from "../../constants.js";
 import { getCachedImage, storeImageInCache } from "./cache.js";
 import sharp from "sharp";
+import { sendWebhookMessage } from "./webhook.js";
 
 /**
  * Render pixel art directly at display size — no resize step.
@@ -62,11 +63,6 @@ async function applyPlotOverlay(basePng: Buffer): Promise<Buffer> {
 
     const rawPng = canvas.toBuffer("image/png");
 
-    // return sharp(rawPng)
-    // .flatten({ background: "#ffffff" }) // composite alpha onto white, removes alpha channel
-    // .png()
-    // .toBuffer();
-
     return rawPng;
 }
 
@@ -97,6 +93,8 @@ export async function generateImageData(
         console.info(`Generating base image for hash: ${imgHash}`);
         basePng = hexStringToCanvas(code, size);
         storeImageInCache(NO_PLOT_DIR, imgHash, basePng);
+
+        sendWebhookMessage(size <= 15 ? code : imgHash);
     }
 
     // ---- Step 2: Return base if plot not requested ----

@@ -344,3 +344,17 @@ export async function hasUserVoted(userId: string): Promise<boolean> {
     const currentTs = Math.floor(Date.now() / 1000);
     return currentTs - row.timestamp < 43200; // 12 hours
 }
+
+export async function recordVote(userId: string): Promise<void> {
+    const timestamp = Math.floor(Date.now() / 1000);
+
+    await pool.query(
+        `
+        INSERT INTO vote (user_id, timestamp)
+        VALUES ($1, $2)
+        ON CONFLICT (user_id)
+        DO UPDATE SET timestamp = EXCLUDED.timestamp
+        `,
+        [userId, timestamp],
+    );
+}
