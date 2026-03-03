@@ -40,9 +40,7 @@ export async function pixelButtonExecute(interaction: ButtonInteraction) {
     const key = await getCanvasKey(url!);
 
     const num = Number(interaction.customId.split(":")[1]);
-    const start = Date.now();
     const colour = await getUserColour(interaction.user.id);
-    console.log(`getUserColour took ${Date.now() - start}ms`);
 
     const newKey = key.slice(0, num * 6) + colour + key.slice(num * 6 + 6);
     const embed = await createCanvasEmbed(newKey);
