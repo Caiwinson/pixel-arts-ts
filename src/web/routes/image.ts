@@ -4,14 +4,11 @@ import {
     type Response,
     type RequestHandler,
 } from "express";
-import path from "path";
-import fs from "fs";
 import rateLimit from "express-rate-limit";
 import { generateImageData } from "../services/image.js";
 import { getImageHash } from "../../database.js";
-import { PREVIEW_PATH } from "../../constants.js";
 
-const router = Router();
+const imageRouter = Router();
 
 // ---- Helpers ----
 
@@ -29,14 +26,6 @@ const imageLimiter = rateLimit({
     message: "Too many requests, please try again later.",
 });
 
-const previewLimiter = rateLimit({
-    windowMs: 60 * 1000,
-    max: 20,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: "Too many requests, please try again later.",
-});
-
 // ---- Typed param interfaces ----
 
 interface HexCodeParams {
@@ -45,9 +34,6 @@ interface HexCodeParams {
 interface ImgHashParams {
     imgHash: string;
 }
-interface PreviewCodeParams {
-    code: string;
-}
 
 // ---- Routes ----
 
@@ -55,7 +41,7 @@ interface PreviewCodeParams {
  * GET /image/:hexCode
  * Generates a pixel-art PNG from a compact hex string (150 / 600 / 1350 chars).
  */
-router.get("/image/:hexCode", imageLimiter, (async (
+imageRouter.get("/image/:hexCode", imageLimiter, (async (
     req: Request<HexCodeParams>,
     res: Response,
 ) => {
@@ -84,7 +70,7 @@ router.get("/image/:hexCode", imageLimiter, (async (
  * GET /image_large/:imgHash
  * Generates a pixel-art PNG for large canvases (20x20, 25x25) looked up by SHA-256 hash.
  */
-router.get("/image_large/:imgHash", imageLimiter, (async (
+imageRouter.get("/image_large/:imgHash", imageLimiter, (async (
     req: Request<ImgHashParams>,
     res: Response,
 ) => {
@@ -117,30 +103,4 @@ router.get("/image_large/:imgHash", imageLimiter, (async (
     }
 }) as unknown as RequestHandler);
 
-/**
- * GET /preview/:code
- * Serves a cached MP4 timelapse file from PREVIEW_DIR.
- */
-router.get("/preview/:code", previewLimiter, ((
-    req: Request<PreviewCodeParams>,
-    res: Response,
-) => {
-    const raw = stripExtension(req.params.code);
-
-    if (!/^[0-9]{5,20}$/.test(raw)) {
-        res.status(400).send("Invalid preview ID");
-        return;
-    }
-
-    const filePath = path.join(PREVIEW_PATH, `${raw}.mp4`);
-
-    if (!fs.existsSync(filePath)) {
-        res.status(404).send("Preview not found");
-        return;
-    }
-
-    res.setHeader("Content-Type", "video/mp4");
-    res.sendFile(filePath);
-}) as unknown as RequestHandler);
-
-export default router;
+export default imageRouter;
