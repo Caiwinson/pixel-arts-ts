@@ -20,8 +20,8 @@ client.once(Events.ClientReady, (c) => {
     application = c.application;
     if (client.shard?.ids.includes(0) ?? true) {
         refreshCommands();
+        console.log(`✅ Logged in as ${c.user.tag}`);
     }
-    console.log(`✅ Logged in as ${c.user.tag}`);
 });
 
 // Interaction event

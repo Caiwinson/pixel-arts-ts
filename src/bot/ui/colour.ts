@@ -1,5 +1,6 @@
 import { createCanvas } from "@napi-rs/canvas";
 import {
+    Collection,
     LabelBuilder,
     MessageFlags,
     ModalBuilder,
@@ -104,11 +105,14 @@ const emojiQueue: (() => Promise<void>)[] = [];
 
 let emojiCreating = false;
 
-export async function getEmoji(hex: string): Promise<string> {
+export async function getEmoji(
+    hex: string,
+    prefetchedEmojis?: Collection<string, Emoji>,
+): Promise<string> {
     const clean = cleanHex(hex);
 
-    // Check if the emoji already exists under the application
-    const emojis = await application.emojis.fetch();
+    // Use prefetched collection if provided, otherwise fetch fresh
+    const emojis = prefetchedEmojis ?? (await application.emojis.fetch());
     const existing = emojis.find((e: Emoji) => e.name === clean);
 
     if (existing) return existing.toString();
@@ -257,6 +261,9 @@ export async function createColourPickerMenu(
 
     const defaultClean = cleanHex(defaultHex);
 
+    // Fetch emojis once up front for the entire function
+    const existingEmojis = await application.emojis.fetch();
+
     async function addColour(
         hex: string,
 
@@ -298,14 +305,14 @@ export async function createColourPickerMenu(
 
     await Promise.all(
         extra_colours.map(async (hex) => {
-            const emoji = await getEmoji(hex);
+            const emoji = await getEmoji(hex, existingEmojis);
 
             await addColour(hex, emoji);
         }),
     );
 
     if (!used.has(defaultClean)) {
-        const emoji = await getEmoji(defaultClean);
+        const emoji = await getEmoji(defaultClean, existingEmojis);
 
         await addColour(defaultClean, emoji);
     }

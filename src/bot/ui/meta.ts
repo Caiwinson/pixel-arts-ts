@@ -6,10 +6,7 @@ import {
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
 } from "discord.js";
-import {
-    getCanvasHistory,
-    revertLastPixel,
-} from "../../database.js";
+import { getCanvasHistory, revertLastPixel } from "../../database.js";
 import { createCanvasEmbed, ensureOwner, getCanvasKey } from "../utils.js";
 import { createClosedView } from "./closed.js";
 
@@ -101,10 +98,6 @@ export async function closeExecute(interaction: ButtonInteraction) {
     try {
         confirmed = await confirmClose(interaction, id);
     } catch {
-        await interaction.followUp({
-            content: "You did not confirm in time.",
-            flags: MessageFlags.Ephemeral,
-        });
         return;
     }
 
