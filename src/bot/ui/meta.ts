@@ -88,7 +88,7 @@ export async function closeExecute(interaction: ButtonInteraction) {
     );
     if (!allowed) return;
 
-    if (getCanvasHistory(message.id).length <= 2) {
+    if ((await getCanvasHistory(message.id)).length <= 2) {
         await interaction.reply({
             content: "Not enough changes were made.",
             flags: MessageFlags.Ephemeral,
@@ -121,9 +121,9 @@ export async function closeExecute(interaction: ButtonInteraction) {
     } else {
         const url = message.embeds?.[0]?.image?.url!;
 
-        const key = getCanvasKey(url);
+        const key = await getCanvasKey(url);
 
-        const embed = createCanvasEmbed(key);
+        const embed = await createCanvasEmbed(key);
 
         await message.edit({
             content: "Canvas closed.",
@@ -185,7 +185,7 @@ export async function undoCanvasExecute(interaction: ButtonInteraction) {
         return;
     }
 
-    const key = revertLastPixel(message.id);
+    const key = await revertLastPixel(message.id);
 
     if (!key) {
         await interaction.reply({
@@ -198,7 +198,7 @@ export async function undoCanvasExecute(interaction: ButtonInteraction) {
     const showsPlot =
         message.embeds?.[0]?.image?.url?.includes("?plot=True") ?? false;
 
-    const embed = createCanvasEmbed(key, showsPlot);
+    const embed = await createCanvasEmbed(key, showsPlot);
 
     if (uiMode === "basic") {
         await interaction.deferUpdate();

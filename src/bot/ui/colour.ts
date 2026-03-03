@@ -95,15 +95,8 @@ export async function getColourName(hex: string): Promise<string> {
 }
 
 /* ------------------------------------------------ */
-/*                EMOJI CACHE SYSTEM               */
+/*                  GET EMOJI                      */
 /* ------------------------------------------------ */
-
-type EmojiEntry = {
-    id: string;
-    str: string;
-};
-
-const EmojiCache = new Map<string, EmojiEntry>();
 
 const pendingEmoji = new Map<string, Promise<string>>();
 
@@ -111,37 +104,14 @@ const emojiQueue: (() => Promise<void>)[] = [];
 
 let emojiCreating = false;
 
-/* ------------------------------------------------ */
-/*               EMOJI CACHE INIT                  */
-/* ------------------------------------------------ */
-
-export async function initEmojiCache() {
-    const emojis = await application.emojis.fetch();
-
-    emojis.forEach((emoji: Emoji) => {
-        if (!emoji.name) return;
-
-        EmojiCache.set(emoji.name, {
-            id: emoji.id!,
-            str: emoji.toString(),
-        });
-    });
-}
-
-/* ------------------------------------------------ */
-/*                  GET EMOJI                      */
-/* ------------------------------------------------ */
-
 export async function getEmoji(hex: string): Promise<string> {
     const clean = cleanHex(hex);
 
-    if (EmojiCache.has(clean)) {
-        const entry = EmojiCache.get(clean)!;
+    // Check if the emoji already exists under the application
+    const emojis = await application.emojis.fetch();
+    const existing = emojis.find((e: Emoji) => e.name === clean);
 
-        refreshLRU(EmojiCache, clean, entry);
-
-        return entry.str;
-    }
+    if (existing) return existing.toString();
 
     if (pendingEmoji.has(clean)) return pendingEmoji.get(clean)!;
 
@@ -166,11 +136,9 @@ function queueEmojiCreation(hex: string): Promise<string> {
         emojiQueue.push(async () => {
             await ensureEmojiCapacity();
 
-            const entry = await createEmoji(hex);
+            const emoji = await createEmoji(hex);
 
-            EmojiCache.set(hex, entry);
-
-            resolve(entry.str);
+            resolve(emoji.toString());
         });
 
         processEmojiQueue();
@@ -202,23 +170,22 @@ function sleep(ms: number) {
 }
 
 /* ------------------------------------------------ */
-/*             ENSURE CACHE CAPACITY               */
+/*             ENSURE EMOJI CAPACITY               */
 /* ------------------------------------------------ */
 
 async function ensureEmojiCapacity() {
-    if (EmojiCache.size < MAX_EMOJIS) return;
+    const emojis = await application.emojis.fetch();
 
-    const oldestKey = EmojiCache.keys().next().value;
+    if (emojis.size < MAX_EMOJIS) return;
 
-    if (!oldestKey) return;
+    // Evict the oldest non-preset emoji
+    const oldest = emojis.find(
+        (e: Emoji) => e.name && !presetHexSet.has(e.name.toLowerCase()),
+    );
 
-    const entry = EmojiCache.get(oldestKey);
+    if (!oldest) return;
 
-    if (!entry) return;
-
-    await application.emojis.delete(entry.id);
-
-    EmojiCache.delete(oldestKey);
+    await application.emojis.delete(oldest.id!);
 }
 
 /* ------------------------------------------------ */
@@ -229,7 +196,7 @@ const canvas = createCanvas(96, 96);
 
 const ctx = canvas.getContext("2d");
 
-async function createEmoji(hex: string): Promise<EmojiEntry> {
+async function createEmoji(hex: string): Promise<Emoji> {
     if (!/^[0-9A-Fa-f]{6}$/.test(hex)) throw new Error("Invalid hex");
 
     ctx.clearRect(0, 0, 96, 96);
@@ -270,11 +237,7 @@ async function createEmoji(hex: string): Promise<EmojiEntry> {
         name: hex,
     });
 
-    return {
-        id: emoji.id,
-
-        str: emoji.toString(),
-    };
+    return emoji;
 }
 
 /* ------------------------------------------------ */
@@ -420,7 +383,7 @@ export async function colourMenuExecute(
     const value = interaction.values[0]!;
 
     if (value !== "custom") {
-        setUserColour(interaction.user.id, value);
+        await setUserColour(interaction.user.id, value);
 
         await interaction.deferUpdate();
 
@@ -458,7 +421,7 @@ export async function colourMenuExecute(
         return;
     }
 
-    setUserColour(interaction.user.id, hex);
+    await setUserColour(interaction.user.id, hex);
 
     await submitted.deferUpdate();
 

@@ -80,7 +80,7 @@ export async function downloadButtonExecute(interaction: ButtonInteraction) {
 export async function timelapseButtonExecute(interaction: ButtonInteraction) {
     try {
         // Fetch canvas history for this message / user
-        const history = getCanvasHistory(interaction.message.id);
+        const history = await getCanvasHistory(interaction.message.id);
 
         if (!history || history.length === 0) {
             await interaction.editReply({

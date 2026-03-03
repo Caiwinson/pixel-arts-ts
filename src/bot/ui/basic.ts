@@ -37,15 +37,17 @@ export function createCanvasView(): ActionRowBuilder<ButtonBuilder>[] {
 
 export async function pixelButtonExecute(interaction: ButtonInteraction) {
     const url = interaction.message.embeds?.[0]?.image?.url;
-    const key = getCanvasKey(url!);
+    const key = await getCanvasKey(url!);
 
     const num = Number(interaction.customId.split(":")[1]);
-    const colour = getUserColour(interaction.user.id);
+    const start = Date.now();
+    const colour = await getUserColour(interaction.user.id);
+    console.log(`getUserColour took ${Date.now() - start}ms`);
 
     const newKey = key.slice(0, num * 6) + colour + key.slice(num * 6 + 6);
-    const embed = createCanvasEmbed(newKey);
+    const embed = await createCanvasEmbed(newKey);
     await interaction.update({ embeds: [embed] });
-    recordPixelUpdate(
+    await recordPixelUpdate(
         interaction.message.id,
         newKey,
         `${num}:${colour}`,

@@ -17,7 +17,6 @@ import {
 } from "../utils.js";
 import {
     recordPixelUpdate,
-    getImageHash,
     getUserColour,
 } from "../../database.js";
 import { createToolMenu } from "./tools.js";
@@ -170,13 +169,13 @@ export async function rowOptionsExecute(
     await interaction.deferUpdate();
 }
 
-export function parseCanvasState(messageId: Message) {
+export async function parseCanvasState(messageId: Message) {
     // Safely get URL from embed
     const url = messageId.embeds?.[0]?.image?.url;
     if (!url) return null; // no image, abort
 
     // Extract key from URL
-    const key = getCanvasKey(url);
+    const key = await getCanvasKey(url);
     const size = Math.sqrt(key.length / 6);
 
     // Determine if ?plot=True is in the URL
@@ -187,7 +186,7 @@ export function parseCanvasState(messageId: Message) {
 }
 
 export async function placePixelExecute(interaction: ButtonInteraction) {
-    const canvasState = parseCanvasState(interaction.message);
+    const canvasState = await parseCanvasState(interaction.message);
     if (!canvasState) return;
 
     const { key: keyStr, size, showsPlot } = canvasState;
@@ -201,7 +200,7 @@ export async function placePixelExecute(interaction: ButtonInteraction) {
     const x = selection.x - 1;
     const y = selection.y - 1;
 
-    const colour = getUserColour(interaction.user.id);
+    const colour = await getUserColour(interaction.user.id);
     const num = y * size + x;
 
     const colourMenu = getStringSelectById(interaction.message, "cc:advanced");
@@ -216,7 +215,7 @@ export async function placePixelExecute(interaction: ButtonInteraction) {
     const newKey =
         keyStr.slice(0, num * 6) + colour + keyStr.slice(num * 6 + 6);
 
-    const embeds = createCanvasEmbed(newKey, showsPlot);
+    const embeds = await createCanvasEmbed(newKey, showsPlot);
 
     await interaction.update({
         embeds: [embeds],
@@ -230,7 +229,7 @@ export async function placePixelExecute(interaction: ButtonInteraction) {
         ),
     });
 
-    recordPixelUpdate(
+    await recordPixelUpdate(
         interaction.message.id,
         newKey,
         `${num}:${colour}`,
@@ -261,7 +260,7 @@ export async function toggleToolExecute(interaction: ButtonInteraction) {
         getStringSelectById(interaction.message, "cc:advanced")!,
     );
 
-    const colour = getUserColour(interaction.user.id);
+    const colour = await getUserColour(interaction.user.id);
 
     await interaction.update({
         components: await createAdvanceView(

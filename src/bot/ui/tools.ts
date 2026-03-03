@@ -84,7 +84,7 @@ async function createToolModal(
         getStringSelectById(interaction.message, "cc:advanced")!,
     );
 
-    const colour = getUserColour(interaction.user.id);
+    const colour = await getUserColour(interaction.user.id);
 
     const modal = new ModalBuilder().setCustomId(`tm:${id}`).setTitle(title);
 
@@ -193,13 +193,13 @@ async function updateCanvas(
     deltas: string[],
     showsPlot: boolean,
 ) {
-    const embeds = createCanvasEmbed(key, showsPlot);
+    const embeds = await createCanvasEmbed(key, showsPlot);
 
     await interaction.message.edit({
         embeds: [embeds],
     });
 
-    recordPixelUpdate(
+    await recordPixelUpdate(
         interaction.message.id,
         key,
         deltas.join(","),
@@ -223,7 +223,7 @@ function setPixel(
 }
 
 async function handleLine(interaction: StringSelectMenuInteraction) {
-    const canvasState = parseCanvasState(interaction.message);
+    const canvasState = await parseCanvasState(interaction.message);
     if (!canvasState) return; // exit if null
 
     const { key, size, showsPlot } = canvasState; // now safe
@@ -273,7 +273,7 @@ async function handleLine(interaction: StringSelectMenuInteraction) {
 }
 
 async function handleRectangle(interaction: StringSelectMenuInteraction) {
-    const canvasState = parseCanvasState(interaction.message);
+    const canvasState = await parseCanvasState(interaction.message);
     if (!canvasState) return;
 
     const { key, size, showsPlot } = canvasState;
@@ -310,7 +310,7 @@ async function handleRectangle(interaction: StringSelectMenuInteraction) {
 async function handleRectangleOutline(
     interaction: StringSelectMenuInteraction,
 ) {
-    const canvasState = parseCanvasState(interaction.message);
+    const canvasState = await parseCanvasState(interaction.message);
     if (!canvasState) return;
 
     const { key, size, showsPlot } = canvasState;
@@ -372,7 +372,7 @@ async function BucketFillModal(
         getStringSelectById(interaction.message, "cc:advanced")!,
     );
 
-    const colour = getUserColour(interaction.user.id);
+    const colour = await getUserColour(interaction.user.id);
 
     const colourLabel = new LabelBuilder()
         .setLabel("Pick a colour")
@@ -386,7 +386,7 @@ async function BucketFillModal(
 }
 
 async function handleBucketFill(interaction: StringSelectMenuInteraction) {
-    const canvasState = parseCanvasState(interaction.message);
+    const canvasState = await parseCanvasState(interaction.message);
     if (!canvasState) return;
 
     const { key, size, showsPlot } = canvasState;
@@ -463,7 +463,7 @@ async function ReplaceColourModal(
     const colourList = getColourList(
         getStringSelectById(interaction.message, "cc:advanced")!,
     );
-    const colour = getUserColour(interaction.user.id);
+    const colour = await getUserColour(interaction.user.id);
 
     const oldLabel = new LabelBuilder()
         .setLabel("Pick a colour to replace")
@@ -487,7 +487,7 @@ async function ReplaceColourModal(
 }
 
 async function handleReplaceColour(interaction: StringSelectMenuInteraction) {
-    const canvasState = parseCanvasState(interaction.message);
+    const canvasState = await parseCanvasState(interaction.message);
     if (!canvasState) return;
 
     const { key, showsPlot } = canvasState;
@@ -551,9 +551,9 @@ async function handlePlot(interaction: StringSelectMenuInteraction) {
 
     const showsPlot = url?.includes("?plot=True") ?? false;
 
-    const key = getCanvasKey(url!);
+    const key = await getCanvasKey(url!);
 
     await interaction.update({
-        embeds: [createCanvasEmbed(key, !showsPlot)],
+        embeds: [await createCanvasEmbed(key, !showsPlot)],
     });
 }

@@ -132,8 +132,8 @@ export async function recreateCommandExecute(
 
         // ---------- UI Creation ----------
         const isAdvance = size > 5;
-        const embed = createCanvasEmbed(key, isAdvance);
-        const defaultHex = getUserColour(interaction.user.id);
+        const embed = await createCanvasEmbed(key, isAdvance);
+        const defaultHex = await getUserColour(interaction.user.id);
 
         if (!isAdvance) {
             await interaction.reply({
@@ -150,8 +150,8 @@ export async function recreateCommandExecute(
                 components: await createColourPickerView(defaultHex),
             });
 
-            recordPixelUpdate(message.id, key, null, interaction.user.id);
-            incrementCanvasCount();
+            await recordPixelUpdate(message.id, key, null, interaction.user.id);
+            await incrementCanvasCount();
         } else {
             await interaction.reply({
                 content: `${interaction.user} has created a canvas.`,
@@ -168,8 +168,8 @@ export async function recreateCommandExecute(
 
             const message = await interaction.fetchReply();
 
-            recordPixelUpdate(message.id, key, null, interaction.user.id);
-            incrementCanvasCount();
+            await recordPixelUpdate(message.id, key, null, interaction.user.id);
+            await incrementCanvasCount();
         }
     } catch (error) {
         console.error("Image processing error:", error);

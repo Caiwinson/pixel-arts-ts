@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as crypto from "crypto";
 import { NO_PLOT_DIR, PLOT_DIR, PLOT_OVERLAY_PATH } from "../../constants.js";
 import { getCachedImage, storeImageInCache } from "./cache.js";
+import sharp from "sharp";
 
 /**
  * Render pixel art directly at display size — no resize step.
@@ -59,7 +60,14 @@ async function applyPlotOverlay(basePng: Buffer): Promise<Buffer> {
     ctx.drawImage(baseImg, 0, 0);
     ctx.drawImage(overlayImg, 0, 0);
 
-    return canvas.toBuffer("image/png");
+    const rawPng = canvas.toBuffer("image/png");
+
+    // return sharp(rawPng)
+    // .flatten({ background: "#ffffff" }) // composite alpha onto white, removes alpha channel
+    // .png()
+    // .toBuffer();
+
+    return rawPng;
 }
 
 export interface GenerateImageOptions {

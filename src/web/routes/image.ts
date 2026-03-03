@@ -96,7 +96,7 @@ router.get("/image_large/:imgHash", imageLimiter, (async (
     }
 
     try {
-        const result = getImageHash(raw);
+        const result = await getImageHash(raw);
         if (!result) {
             res.status(404).send("Image not found");
             return;

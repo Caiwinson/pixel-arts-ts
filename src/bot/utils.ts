@@ -16,7 +16,7 @@ export function hexToInt(hex: string): number {
     return parseInt(hex, 16);
 }
 
-export function createCanvasEmbed(key: string, showPlot = false): EmbedBuilder {
+export async function createCanvasEmbed(key: string, showPlot = false): Promise<EmbedBuilder> {
     // Validate key (matches Python logic)
     if (!key || key.length === 0) {
         throw new Error("Invalid key");
@@ -33,7 +33,7 @@ export function createCanvasEmbed(key: string, showPlot = false): EmbedBuilder {
     if (size === 5 || size === 10 || size === 15) {
         url = `${DOMAIN_URL}/image/${key}.png`;
     } else if (size === 20 || size === 25) {
-        const imgHash = saveImageHash(key, size);
+        const imgHash = await saveImageHash(key, size);
         url = `${DOMAIN_URL}/image_large/${imgHash}.png`;
     } else {
         throw new Error("Invalid canvas size");
@@ -44,7 +44,7 @@ export function createCanvasEmbed(key: string, showPlot = false): EmbedBuilder {
     return embed;
 }
 
-export function getCanvasKey(url: string): string {
+export async function getCanvasKey(url: string): Promise<string> {
     // Get the last segment after "/", default to empty string if undefined
     const lastSegment = url.split("/").pop() ?? "";
 
@@ -55,7 +55,7 @@ export function getCanvasKey(url: string): string {
     let key = noQuery.split(".")[0]!;
 
     if (url.includes("image_large")) {
-        key = getImageHash(key)![1];
+        key = (await getImageHash(key))![1];
     }
 
     return key;
