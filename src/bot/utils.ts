@@ -1,5 +1,6 @@
 import {
     ButtonInteraction,
+    ChatInputCommandInteraction,
     ComponentType,
     EmbedBuilder,
     Message,
@@ -8,7 +9,8 @@ import {
     StringSelectMenuInteraction,
 } from "discord.js";
 import { EMBED_COLOUR, DOMAIN_URL } from "../constants.js";
-import { getImageHash, saveImageHash } from "../database.js";
+import { getImageHash, hasUserVoted, saveImageHash } from "../database.js";
+import { createVoteView } from "./ui/meta.js";
 
 export function hexToInt(hex: string): number {
     // Remove leading "#" if present
@@ -95,4 +97,30 @@ export async function ensureOwner(
         return false;
     }
     return true;
+}
+
+export async function checkVote(
+    interaction: ButtonInteraction | StringSelectMenuInteraction | ChatInputCommandInteraction,
+): Promise<boolean> {
+    const voted = await hasUserVoted(interaction.user.id);
+
+    if (voted) return true;
+
+    const embed = new EmbedBuilder()
+        .setTitle("Expired Votes!")
+        .setDescription(
+            "This is a vote-only feature.\n\nPlease vote for <@1008692736720908318> to use it.",
+        )
+        .setColor(EMBED_COLOUR)
+        .setImage(
+            `${DOMAIN_URL}/static/vote.png`
+        );
+
+    await interaction.reply({
+        embeds: [embed],
+        components: createVoteView(),
+        flags: MessageFlags.Ephemeral,
+    });
+
+    return false;
 }

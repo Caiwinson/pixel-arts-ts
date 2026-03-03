@@ -7,7 +7,7 @@ import {
 
 import { createCanvasView, createColourPickerView } from "../ui/basic.js";
 import { createAdvanceView } from "../ui/advance.js";
-import { createCanvasEmbed } from "../utils.js";
+import { checkVote, createCanvasEmbed } from "../utils.js";
 
 import {
     incrementCanvasCount,
@@ -88,8 +88,8 @@ export async function recreateCommandExecute(
     }
 
     // ---------- Voting Requirement ----------
-    // const hasVoted = await checkVote(interaction);
-    // if (!hasVoted) return;
+    const hasVoted = await checkVote(interaction);
+    if (!hasVoted) return;
 
     // Image processing may take time
     //await interaction.deferReply(wi);

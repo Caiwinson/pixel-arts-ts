@@ -1,5 +1,8 @@
 import {
+    ActionRowBuilder,
+    ButtonBuilder,
     ButtonInteraction,
+    ButtonStyle,
     LabelBuilder,
     MessageFlags,
     ModalBuilder,
@@ -199,4 +202,15 @@ export async function undoCanvasExecute(interaction: ButtonInteraction) {
     } else {
         await interaction.update({ embeds: [embed] });
     }
+}
+
+export function createVoteView(): ActionRowBuilder<ButtonBuilder>[] {
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+            .setLabel("Vote on Top.gg")
+            .setStyle(ButtonStyle.Link)
+            .setURL("https://top.gg/bot/1008692736720908318/vote")
+            .setEmoji("<:topgg:1478516915369541893>"),
+    );
+    return [row];
 }

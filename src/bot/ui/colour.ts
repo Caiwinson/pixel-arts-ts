@@ -19,7 +19,7 @@ import { COLOUR_OPTION } from "../../constants.js";
 import { setUserColour } from "../../database.js";
 import { createColourPickerView } from "./basic.js";
 import { createAdvanceView, getUserSelection } from "./advance.js";
-import { getStringSelectById } from "../utils.js";
+import { checkVote, getStringSelectById } from "../utils.js";
 
 /* ------------------------------------------------ */
 /*                    CONSTANTS                     */
@@ -396,6 +396,10 @@ export async function colourMenuExecute(
 
         return;
     }
+
+    const hasVoted = await checkVote(interaction);
+
+    if (!hasVoted) return;
 
     const id = Math.floor(Math.random() * 1000000);
 

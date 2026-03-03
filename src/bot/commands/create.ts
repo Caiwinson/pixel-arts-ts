@@ -6,7 +6,7 @@ import {
     ModalSubmitInteraction,
 } from "discord.js";
 import { createCanvasView, createColourPickerView } from "../ui/basic.js";
-import { createCanvasEmbed } from "../utils.js";
+import { checkVote, createCanvasEmbed } from "../utils.js";
 import { COLOUR_OPTION } from "../../constants.js";
 import {
     incrementCanvasCount,
@@ -91,6 +91,11 @@ export async function createCommandExecute(
     let baseColour = interaction.options.getString("colour") || "ffffff";
     const size = interaction.options.getInteger("size") || 5;
     const enableTools = interaction.options.getBoolean("enable_tools") ?? true;
+
+    if (baseColour === "custom" || size > 15) {
+        const hasVoted = await checkVote(interaction);
+        if (!hasVoted) return;
+    }
 
     if (baseColour === "custom") {
         // id = random number
