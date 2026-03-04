@@ -20,7 +20,17 @@ const STATUSES: { name: string; type: ActivityType }[] = [
 async function getDynamicStatus(
     client: Client,
 ): Promise<{ name: string; type: ActivityType }> {
-    const guildCount = client.guilds.cache.size;
+    let guildCount: number;
+    if (client.shard) {
+        const counts = await client.shard
+            .fetchClientValues("guilds.cache.size")
+            .catch(() => null);
+        guildCount = counts
+            ? (counts as number[]).reduce((a, b) => a + b, 0)
+            : client.guilds.cache.size;
+    } else {
+        guildCount = client.guilds.cache.size;
+    }
     const canvasCount = await getCanvasCount();
     return {
         name: `${canvasCount} Canvases, ${guildCount} guilds`,
