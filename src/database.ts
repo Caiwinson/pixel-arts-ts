@@ -21,7 +21,7 @@ async function initDb(): Promise<void> {
             key TEXT NOT NULL,
             is_delta BOOLEAN NOT NULL,
             user_id TEXT NOT NULL,
-            timestamp INTEGER NOT NULL,
+            timestamp BIGINT NOT NULL,
             readable_time TEXT NOT NULL,
             PRIMARY KEY (message_id, row_id)
         );
@@ -35,7 +35,7 @@ async function initDb(): Promise<void> {
 
         CREATE TABLE IF NOT EXISTS vote (
             user_id TEXT PRIMARY KEY,
-            timestamp INTEGER
+            timestamp BIGINT
         );
 
         CREATE TABLE IF NOT EXISTS image_hash (
