@@ -9,6 +9,7 @@ import fs from "fs";
 import rateLimit from "express-rate-limit";
 import { PREVIEW_PATH } from "../../constants.js";
 import { generateDownloadVideo } from "../services/video.js";
+import { getCanvasHistory } from "../../database.js";
 
 const videoRouter = Router();
 
@@ -18,6 +19,10 @@ interface DownloadParams {
 
 interface PreviewParams {
     code: string;
+}
+
+interface HistoryParams {
+    messageId: string;
 }
 
 function stripExtension(value: string): string {
@@ -105,6 +110,52 @@ videoRouter.get("/preview/:code", previewLimiter, ((
 
     res.setHeader("Content-Type", "video/mp4");
     res.sendFile(filePath);
+}) as unknown as RequestHandler);
+
+/**
+ * GET /canvas-history/:messageId
+ * Returns stripped canvas history JSON for a given message ID.
+ * Only responds if the timelapse video already exists (auth gate).
+ * Sensitive fields (user_id, timestamp, readable_time) are omitted.
+ */
+videoRouter.get("/canvas-history/:messageId", previewLimiter, (async (
+    req: Request<HistoryParams>,
+    res: Response,
+) => {
+    const { messageId } = req.params;
+
+    if (!/^[0-9]{5,20}$/.test(messageId)) {
+        res.status(400).send("Invalid message ID");
+        return;
+    }
+
+    // Auth: only serve history if the timelapse video already exists
+    const videoPath = path.join(PREVIEW_PATH, `${messageId}.mp4`);
+    if (!fs.existsSync(videoPath)) {
+        res.status(404).send("Timelapse not found");
+        return;
+    }
+
+    try {
+        const history = await getCanvasHistory(messageId);
+
+        if (!history || history.length === 0) {
+            res.status(404).send("No history found");
+            return;
+        }
+
+        // Strip sensitive fields — only expose what the renderer needs
+        const safe = history.map(({ row_id, key, is_delta }) => ({
+            row_id,
+            key,
+            is_delta,
+        }));
+
+        res.json(safe);
+    } catch (err) {
+        console.error(`Canvas history fetch failed for ${messageId}: ${err}`);
+        res.status(500).send("Error fetching history");
+    }
 }) as unknown as RequestHandler);
 
 export default videoRouter;

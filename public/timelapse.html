@@ -1,197 +1,248 @@
 <!doctype html>
-<html>
-    <head>
-        <title>Preview</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                margin: 0;
-                background-size: 150% 150%;
-                background-position: center;
-                background: radial-gradient(#0b3d91, #1f1f1f);
-                color: white;
-                animation: fadeOut 1s cubic-bezier(0, 0, 0, 1.5);
-                margin: 0 auto;
-                padding: 20px;
-                display: flex; /* Add flex display */
-                align-items: center; /* Align vertically */
-                justify-content: center; /* Center horizontally */
-                flex-direction: row;
-                height: 100vh;
-            }
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Timelapse — Pixel Arts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/timelapse.css" />
+</head>
+<body>
+<div class="wrapper">
+    <header>
+        <h1>TIMELAPSE</h1>
+        <p>Pixel Arts — Canvas Replay</p>
+    </header>
 
-            @keyframes fadeOut {
-                from {
-                    opacity: 0;
-                    transform: translateY(-5vh);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
+    <div id="errorMsg">Failed to load timelapse data.</div>
 
-            #preview {
-                width: 40vw; /* 40% of the frame width */
-                height: 40vw; /* Maintain aspect ratio */
-            }
-
-            #menu {
-                width: 40vw;
-                height: 40vw; /* Auto height to fit content */
-                margin-left: 20px;
-                display: flex; /* Added flex display */
-                flex-direction: column; /* Menu items stacked vertically */
-                align-items: center; /* Center horizontally */
-                justify-content: center; /* Center vertically */
-            }
-
-            #speedSlider {
-                width: 80%; /* Take full width of the menu */
-                background-color: #333;
-                border: none;
-                height: 20px;
-                border-radius: 5px;
-            }
-
-            #speedSlider::-webkit-slider-thumb {
-                appearance: none;
-                width: 20px;
-                height: 20px;
-                background-color: #fff;
-                border-radius: 50%;
-                cursor: pointer;
-            }
-
-            #download {
-                background-color: #ffa500;
-                color: white;
-                border: none;
-                border-radius: 10px; /* Increase the border radius for button */
-                padding: 15px 30px; /* Increase padding for button */
-                cursor: pointer;
-                transition:
-                    background-color 0.3s,
-                    transform 0.2s;
-                margin-top: 20px; /* Add margin to separate from slider */
-                font-family: Arial, sans-serif; /* Set font to Arial */
-                font-size: 16px; /* Increase font size */
-            }
-
-            #download:hover {
-                background-color: white; /* White background color on hover */
-                color: #ffa500; /* Orange text color on hover */
-                transform: scale(1.1); /* Enlarge the button on hover */
-            }
-
-            #speed {
-                margin-top: 10px; /* Add margin to separate from slider */
-                font-family: Arial, sans-serif; /* Set font to Arial */
-            }
-
-            /* Scrollbar styles */
-            ::-webkit-scrollbar {
-                width: 10px;
-                height: 10px;
-            }
-            ::-webkit-scrollbar-track {
-                background-color: transparent;
-            }
-            ::-webkit-scrollbar-thumb {
-                border-radius: 10px;
-            }
-            ::-webkit-scrollbar-corner {
-                background-color: transparent;
-            }
-            ::-webkit-scrollbar-thumb {
-                background-color: transparent;
-            }
-        </style>
-    </head>
-    <body>
-        <video
-            src="/preview/{{ code }}"
-            autoplay
-            muted
-            loop
-            id="preview"
-        ></video>
-        <div id="menu">
-            <input type="range" id="speedSlider" min="1" step="1" />
-            <h1 id="speed">1x</h1>
-            <button id="download">Download</button>
+    <div class="main">
+        <div class="canvas-wrap">
+            <canvas id="pixelCanvas" width="500" height="500"></canvas>
+            <div id="loadingOverlay">
+                <div class="spinner"></div>
+                <div id="loadingText">Loading history…</div>
+            </div>
         </div>
-        <script>
-            // Get the 'code' from the URL
-            const code = window.location.pathname.split("/").pop();
 
-            const video = document.getElementById("preview");
-            const speedSlider = document.getElementById("speedSlider");
+        <div class="controls">
+            <div class="stat-row">
+                <div class="stat">
+                    <div class="stat-label">Frame</div>
+                    <div class="stat-value" id="statFrame">—</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Total</div>
+                    <div class="stat-value" id="statTotal">—</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Size</div>
+                    <div class="stat-value" id="statSize">—</div>
+                </div>
+            </div>
 
-            video.src = `/preview/${code}`; // dynamic video source
+            <div class="speed-section">
+                <div class="section-label">Playback Speed</div>
 
-            // Download button
-            document
-                .getElementById("download")
-                .addEventListener("click", () => {
-                    const a = document.createElement("a");
-                    const safeCode = encodeURIComponent(code);
-                    a.href = `/download/${safeCode}-${speedSlider.value}`;
-                    a.download = "video.mp4";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                });
+                <div class="slider-row">
+                    <input type="range" id="speedSlider" min="1" max="100" step="1" value="1" />
+                    <span class="slider-readout" id="sliderReadout">1 fps</span>
+                </div>
 
-            // Speed controls
-            video.addEventListener("loadedmetadata", () => {
-                speedSlider.max = Math.ceil(video.duration);
-                speedSlider.value = 1;
-                updateSpeed();
-            });
+                <div class="speed-buttons" id="speedBtns">
+                    <button class="speed-btn active" data-fps="1">1×</button>
+                    <button class="speed-btn" data-fps="2">2×</button>
+                    <button class="speed-btn" data-fps="4">4×</button>
+                    <button class="speed-btn" data-fps="8">8×</button>
+                    <button class="speed-btn" data-fps="16">16×</button>
+                    <button class="speed-btn" data-id="max">Max</button>
+                </div>
+            </div>
 
-            speedSlider.addEventListener("input", () => {
-                video.playbackRate = Number(speedSlider.value);
-                updateSpeed();
-            });
+            <button class="play-btn" id="playBtn">
+                <span id="playIcon">▶</span>
+                <span id="playLabel">Play</span>
+            </button>
 
-            function updateSpeed() {
-                const speed = video.playbackRate;
-                const duration = video.duration / speed;
+            <a class="dl-btn" id="dlBtn" href="#">↓ Download MP4</a>
+        </div>
+    </div>
+</div>
 
-                const seconds = Math.floor(duration % 60);
-                const minutes = Math.floor((duration / 60) % 60);
-                const hours = Math.floor(duration / 3600);
+<script>
+(async () => {
+    const messageId = window.location.pathname.split('/').pop();
+    const canvas = document.getElementById('pixelCanvas');
+    const ctx = canvas.getContext('2d');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const loadingText = document.getElementById('loadingText');
+    const errorMsg = document.getElementById('errorMsg');
+    const playBtn = document.getElementById('playBtn');
+    const playIcon = document.getElementById('playIcon');
+    const playLabel = document.getElementById('playLabel');
+    const statFrame = document.getElementById('statFrame');
+    const statTotal = document.getElementById('statTotal');
+    const statSize = document.getElementById('statSize');
+    const dlBtn = document.getElementById('dlBtn');
+    const speedSlider = document.getElementById('speedSlider');
+    const sliderReadout = document.getElementById('sliderReadout');
 
-                let time = hours > 0 ? `${hours}:` : "";
-                time += minutes < 10 ? `0${minutes}:` : `${minutes}:`;
-                time += seconds < 10 ? `0${seconds}` : `${seconds}`;
+    let frames = [];
+    let size = 0;
+    let scale = 1;
+    let currentFrame = 0;
+    let playing = false;
+    let fps = 1;
+    let totalFrames = 0;
+    let rafId = null;
+    let lastTimestamp = null;
 
-                document.getElementById("speed").innerHTML =
-                    `${speed}x (${time})`;
+    function updateDownloadLink() {
+        dlBtn.href = `/download/${messageId}-${fps}`;
+        dlBtn.setAttribute('download', `${messageId}-${fps}.mp4`);
+    }
+
+    // ---- Fetch history ----
+    let history;
+    try {
+        const res = await fetch(`/canvas-history/${messageId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        history = await res.json();
+    } catch (err) {
+        loadingOverlay.classList.add('hidden');
+        errorMsg.style.display = 'block';
+        console.error('Failed to fetch history:', err);
+        return;
+    }
+
+    // ---- Build frames ----
+    loadingText.textContent = 'Building frames…';
+
+    const firstFull = history.find(r => !r.is_delta);
+    if (!firstFull) {
+        loadingOverlay.classList.add('hidden');
+        errorMsg.style.display = 'block';
+        return;
+    }
+
+    size = Math.round(Math.sqrt(firstFull.key.length / 6));
+    scale = size <= 5 ? 100 : size <= 15 ? 50 : 30;
+    const dim = size * scale;
+    canvas.width = dim;
+    canvas.height = dim;
+
+    let pixels = new Array(size * size).fill('ffffff');
+
+    for (const row of history) {
+        if (!row.is_delta) {
+            const parts = row.key.match(/.{6}/g);
+            if (parts && parts.length === size * size) pixels = parts.slice();
+        } else {
+            for (const entry of row.key.split(',')) {
+                const ci = entry.indexOf(':');
+                if (ci === -1) continue;
+                const idx = parseInt(entry.slice(0, ci));
+                const hex = entry.slice(ci + 1);
+                if (!isNaN(idx) && hex) pixels[idx] = hex;
             }
+        }
+        frames.push(pixels.slice());
+    }
 
-            // Responsive layout
-            const menu = document.getElementById("menu");
-            function resize() {
-                const width = window.innerWidth;
-                const height = window.innerHeight;
-                if (width > height) {
-                    video.style.width = "40vw";
-                    video.style.height = "40vw";
-                    menu.style.width = "40vw";
-                    menu.style.height = "40vw";
-                    document.body.style.flexDirection = "row";
-                } else {
-                    video.style.width = "40vh";
-                    video.style.height = "40vh";
-                    menu.style.width = "40vh";
-                    menu.style.height = "20vh";
-                    document.body.style.flexDirection = "column";
-                }
-            }
-            window.addEventListener("resize", resize);
-            resize();
-        </script>
-    </body>
+    totalFrames = frames.length;
+    statTotal.textContent = totalFrames;
+    statSize.textContent = `${size}×${size}`;
+
+    // Slider max = totalFrames so all frames play in 1 second at max
+    speedSlider.max = totalFrames;
+    speedSlider.value = 1;
+
+    // ---- Render a frame ----
+    function renderFrame(index) {
+        const f = frames[index];
+        if (!f) return;
+        for (let i = 0; i < f.length; i++) {
+            ctx.fillStyle = `#${f[i]}`;
+            ctx.fillRect((i % size) * scale, Math.floor(i / size) * scale, scale, scale);
+        }
+        currentFrame = index;
+        statFrame.textContent = index + 1;
+    }
+
+    renderFrame(0);
+    loadingOverlay.classList.add('hidden');
+
+    // ---- Animate loop ----
+    function animate(ts) {
+        if (!playing) return;
+        if (lastTimestamp === null) lastTimestamp = ts;
+
+        const elapsed = ts - lastTimestamp;
+        const interval = 1000 / fps;
+
+        if (elapsed >= interval) {
+            lastTimestamp = ts + (elapsed - interval);
+            renderFrame((currentFrame + 1) % totalFrames);
+        }
+
+        rafId = requestAnimationFrame(animate);
+    }
+
+    function startPlay() {
+        playing = true;
+        lastTimestamp = null;
+        playIcon.textContent = '⏸';
+        playLabel.textContent = 'Pause';
+        rafId = requestAnimationFrame(animate);
+    }
+
+    function pausePlay() {
+        playing = false;
+        playIcon.textContent = '▶';
+        playLabel.textContent = 'Play';
+        if (rafId) cancelAnimationFrame(rafId);
+    }
+
+    function setFps(value) {
+        fps = Math.max(1, Math.min(value, totalFrames));
+        speedSlider.value = fps;
+        const secs = (totalFrames / fps).toFixed(1);
+        sliderReadout.textContent = fps >= totalFrames
+            ? `${fps} fps (~1s)`
+            : `${fps} fps (${secs}s)`;
+        lastTimestamp = null;
+        updateDownloadLink();
+    }
+
+    function syncPresetButtons() {
+        document.querySelectorAll('.speed-btn').forEach(btn => {
+            const bfps = btn.dataset.id === 'max' ? totalFrames : parseInt(btn.dataset.fps);
+            btn.classList.toggle('active', bfps === fps);
+        });
+    }
+
+    speedSlider.addEventListener('input', () => {
+        setFps(parseInt(speedSlider.value));
+        syncPresetButtons();
+    });
+
+    document.getElementById('speedBtns').addEventListener('click', e => {
+        const btn = e.target.closest('.speed-btn');
+        if (!btn) return;
+        const target = btn.dataset.id === 'max' ? totalFrames : parseInt(btn.dataset.fps);
+        setFps(target);
+        syncPresetButtons();
+    });
+
+    playBtn.addEventListener('click', () => {
+        if (playing) pausePlay(); else startPlay();
+    });
+
+    // Init
+    setFps(1);
+    syncPresetButtons();
+})();
+</script>
+</body>
 </html>
