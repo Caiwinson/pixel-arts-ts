@@ -9,6 +9,7 @@ import { refreshCommands } from "./deploy-commands.js";
 
 // Import your interaction handler
 import interactionCreate from "./interactionCreate.js";
+import { startTasks } from "./tasks.js";
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds],
@@ -20,6 +21,7 @@ client.once(Events.ClientReady, (c) => {
     application = c.application;
     if (client.shard?.ids.includes(0) ?? true) {
         refreshCommands();
+        startTasks(c);           // ← add this
         console.log(`✅ Logged in as ${c.user.tag}`);
     }
 });

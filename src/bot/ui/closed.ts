@@ -83,8 +83,9 @@ export async function timelapseButtonExecute(interaction: ButtonInteraction) {
         const history = await getCanvasHistory(interaction.message.id);
 
         if (!history || history.length === 0) {
-            await interaction.editReply({
+            await interaction.reply({
                 content: "No canvas history found for timelapse.",
+                flags: MessageFlags.Ephemeral,
             });
             return;
         }

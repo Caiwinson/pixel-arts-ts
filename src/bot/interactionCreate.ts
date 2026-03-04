@@ -23,7 +23,12 @@ import {
 } from "./ui/advance.js";
 import { toolExecute } from "./ui/tools.js";
 import { recreateCommandExecute } from "./commands/recreate.js";
-import { helpCommandExecute, inviteCommandExecute, voteCommandExecute } from "./commands/meta.js";
+import {
+    helpCommandExecute,
+    inviteCommandExecute,
+    voteCommandExecute,
+} from "./commands/meta.js";
+import { handleLegacyInteraction } from "./legacyHandler.js";
 
 // Dispatch maps
 const buttonHandlers: Record<string, (i: ButtonInteraction) => Promise<void>> =
@@ -78,6 +83,7 @@ export default {
     name: Events.InteractionCreate,
 
     async execute(interaction: Interaction) {
+        if (await handleLegacyInteraction(interaction)) return;
         try {
             // Chat input commands
             if (interaction.isChatInputCommand()) {
