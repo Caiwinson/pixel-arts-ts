@@ -145,7 +145,7 @@ export async function recreateCommandExecute(
 
             const message = await interaction.fetchReply();
 
-            await message.reply({
+            await interaction.followUp({
                 content: "Pick a colour!",
                 components: await createColourPickerView(defaultHex),
             });
