@@ -1,136 +1,94 @@
-<html>
-    <head>
-        <link rel="stylesheet" type="text/css" href="/index.css" />
-        <title>Pixel Arts</title>
-        <link
-            rel="shortcut icon"
-            href="/static/images/icon.png"
-            type="image/x-icon"
-        />
-        <link
-            rel="stylesheet"
-            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css"
-            integrity="sha512-+4zCK9k+qNFUR5X+cKL9EIR+ZOhtIloNl9GIKS57V1MyNsYpYcUrUeQc9vNfzsWfV28IaLL3i96P9sdNyeRssA=="
-            crossorigin="anonymous"
-        />
-        <meta property="og:title" content="Pixel Arts" />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://pixelarts.caiwinson.space" />
-        <meta property="og:image" content="/static/icon.png" />
-        <meta
-            property="og:description"
-            content="Pixel Arts is a Discord bot that lets you and your friends create collaborative pixel art canvases."
-        />
-        <meta name="theme-color" content="#5865F2" />
-        <meta
-            name="google-site-verification"
-            content="RnJZAhoZUGKjSw3-WpynMVCtAnNLuREOyY-hg34ek9c"
-        />
-        <link rel="canonical" href="https://pixel-arts.caiwinson.space/" />
-    </head>
-    <body>
-        <div class="container">
-            <img src="/static/icon.png" alt="Bot icon" width="50%" />
-            <div style="display: table; margin: 0 auto">
-                <h1 style="display: inline-block">Pixel Arts</h1>
-                <a
-                    target="_blank"
-                    href="https://top.gg/bot/1008692736720908318/invite"
-                    class="pixel-arts-button"
-                    >Invite the Bot</a
-                >
-            </div>
-            <h2>About Pixel Arts</h2>
-            <p class="center-text">
-                Pixel Arts is a Discord bot that allows you and your friends to
-                create collaborative pixel art canvases. Whether you want to
-                design something beautiful or just have fun, Pixel Arts makes it
-                easy to draw, edit, and share your creations.
-            </p>
-            <h2>Features</h2>
-            <ul>
-                <li>
-                    <strong>Create Canvases:</strong> Use the
-                    <code>/create canvas</code> command to start a new 5x5 or
-                    15x15 canvas.
-                </li>
-                <li>
-                    <strong>Collaborate:</strong> Invite your friends to draw on
-                    the same canvas in real-time.
-                </li>
-                <li>
-                    <strong>Custom Colors:</strong> Unlock custom colors by
-                    voting for the bot on
-                    <a
-                        href="https://top.gg/bot/1008692736720908318/vote"
-                        target="_blank"
-                        >Top.gg</a
-                    >.
-                </li>
-                <li>
-                    <strong>Recreate Images:</strong> Transform images into
-                    editable pixel art canvases using the
-                    <code>/recreate</code> command.
-                </li>
-                <li>
-                    <strong>Timelapse:</strong> Generate a timelapse video of
-                    your canvas's evolution over time.
-                </li>
-            </ul>
-            <h2>How to Use</h2>
-            <ol>
-                <li>
-                    <strong>Create a Canvas:</strong> Run the
-                    <code>/create canvas</code> command to generate a blank
-                    canvas.
-                </li>
-                <li>
-                    <strong>Draw:</strong> Click on the buttons in the grid to
-                    fill pixels with your selected color.
-                </li>
-                <li>
-                    <strong>Change Colors:</strong> Use the color picker to
-                    select a new color or unlock custom colors by voting.
-                </li>
-                <li>
-                    <strong>Advanced Tools:</strong> Use advanced tools like
-                    line drawing, fill, and color replacement for more complex
-                    designs.
-                </li>
-                <li>
-                    <strong>Recreate:</strong> Use the
-                    <code>/recreate</code> command to turn an image into a
-                    canvas and start editing.
-                </li>
-            </ol>
-            <h2>Examples</h2>
-            <h4>Creating a Canvas</h4>
-            <img
-                src="/static/example.gif"
-                alt="Example of creating a canvas"
-                width="100%"
-            />
-            <h4>Recreating an Image</h4>
-            <img
-                src="/static/recreate.gif"
-                alt="Example of recreating an image"
-                width="100%"
-            />
-            <h2>Join the Community</h2>
-            <p>
-                Pixel Arts is inspired by the collaborative spirit of
-                <a target="_blank" href="https://www.reddit.com/r/place/"
-                    >r/place</a
-                >. Join our
-                <a target="_blank" href="https://discord.gg/ErBJ7JTUYe"
-                    >Discord server</a
-                >
-                to share your creations, get support, and stay updated on new
-                features.
-            </p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pixel Arts</title>
+    <link rel="shortcut icon" href="/static/images/icon.png" type="image/x-icon" />
+    <meta property="og:title" content="Pixel Arts" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://pixel-arts.caiwinson.space" />
+    <meta property="og:image" content="/static/icon.png" />
+    <meta property="og:description" content="Pixel Arts is a Discord bot that lets you and your friends create collaborative pixel art canvases." />
+    <meta name="theme-color" content="#5865F2" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/index.css" />
+</head>
+<body>
+<div class="page">
+
+    <header class="header">
+        <img src="/static/icon.png" alt="Pixel Arts icon" />
+        <div class="header-text">
+            <h1>Pixel Arts</h1>
+            <p>Collaborative pixel art for Discord</p>
         </div>
-        <footer>
-            <a href="/terms">Terms of Service and Privacy Policy</a>
-        </footer>
-    </body>
+        <a class="invite-btn" href="https://top.gg/bot/1008692736720908318/invite" target="_blank">Invite Bot</a>
+    </header>
+
+    <div class="label">Features</div>
+    <div class="features">
+        <div class="feature">
+            <span class="feature-icon">🖼️</span>
+            <h3>Create Canvases</h3>
+            <p>Use <code>/create canvas</code> to start a 5×5 up to 15×15 canvas. Unlock 20×20 &amp; 25×25 by voting.</p>
+        </div>
+        <div class="feature vote">
+            <span class="vote-badge">⭐ Vote only</span>
+            <span class="feature-icon">🎨</span>
+            <h3>Custom Colors</h3>
+            <p>Unlock any hex color by voting on <a href="https://top.gg/bot/1008692736720908318/vote" target="_blank">Top.gg</a>. Votes last 12 hours.</p>
+        </div>
+        <div class="feature vote">
+            <span class="vote-badge">⭐ Vote only</span>
+            <span class="feature-icon">🔄</span>
+            <h3>Recreate Images</h3>
+            <p>Transform any image into an editable pixel canvas with <code>/recreate</code>.</p>
+        </div>
+        <div class="feature">
+            <span class="feature-icon">📼</span>
+            <h3>Timelapse</h3>
+            <p>Generate a speed-adjustable timelapse video of your canvas evolution.</p>
+        </div>
+    </div>
+
+    <div class="label">How to Use</div>
+    <div class="steps">
+        <div class="step"><div class="step-num">1</div><p>Run <code>/create canvas</code> to generate a blank canvas.</p></div>
+        <div class="step"><div class="step-num">2</div><p>Click the grid buttons to fill pixels with your selected color.</p></div>
+        <div class="step"><div class="step-num">3</div><p>Use the color picker or unlock custom colors by voting.</p></div>
+        <div class="step"><div class="step-num">4</div><p>Use advanced tools — line, fill, replace color — for complex designs.</p></div>
+        <div class="step"><div class="step-num">5</div><p>Use <code>/recreate</code> to turn any image into an editable canvas.</p></div>
+    </div>
+
+    <div class="label">Examples</div>
+    <div class="examples">
+        <div class="examples-grid">
+            <div class="example-card">
+                <p>Creating a Canvas</p>
+                <img src="/static/example.gif" alt="Creating a canvas" loading="lazy" />
+            </div>
+            <div class="example-card">
+                <p>Recreating an Image</p>
+                <img src="/static/recreate.gif" alt="Recreating an image" loading="lazy" />
+            </div>
+        </div>
+        <div class="example-wide">
+            <p>Made with Pixel Arts</p>
+            <img src="/static/example2.gif" alt="Pixel art showcase" loading="lazy" />
+        </div>
+    </div>
+
+    <footer>
+        <a href="/terms">Terms &amp; Privacy</a>
+        &nbsp;·&nbsp;
+        <a href="https://discord.gg/ErBJ7JTUYe" target="_blank">Support Server</a>
+        &nbsp;·&nbsp;
+        <a href="https://top.gg/bot/1008692736720908318" target="_blank">Top.gg</a>
+    </footer>
+
+</div>
+</body>
 </html>

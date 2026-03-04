@@ -1,114 +1,317 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg: #0d0e14;
+    --surface: #14151f;
+    --border: #1e2030;
+    --accent: #5865f2;
+    --accent2: #7289da;
+    --gold: #ffd635;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+}
+
+html,
 body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  padding: 0;
-  background-size: 150% 150%;
-  background-position: center;
-  background: radial-gradient(#0b3d91, #1f1f1f);
-  color: white;
-  animation: fadeOut 1s cubic-bezier(0, 0, 0, 1.5);
+    background: var(--bg);
+    color: var(--text);
+    font-family: "DM Sans", sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-x: hidden;
 }
 
-@keyframes fadeOut {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 32px 32px;
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 0;
 }
 
-.pixel-arts-button {
-  background-color: #5865f2;
-  color: #ffffff;
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-  margin: 4px 2px;
-  cursor: pointer;
-}
-.pixel-arts-button:hover {
-  background-color: #ffffff;
-  color: #5865f2;
-}
-.container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-}
-h2,
-h3,
-h4,
-h5,
-h6 {
-  text-align: center;
-  margin: 10px 0;
-  color: white;
-}
-img {
-  max-width: 100%;
-  display: block;
-  margin: 20px auto;
-}
-a {
-  color: white;
-}
-.center-text {
-  text-align: center;
-}
-.pixel-arts-button {
-  background-color: #5865f2;
-  color: white;
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 16px;
-  margin: 4px 2px;
-  cursor: pointer;
-}
-.pixel-arts-button:hover {
-  background-color: white;
-  color: #5865f2;
-}
-.pixel-arts-button::before {
-  content: "\f0c1";
-  font-family: "Font Awesome 5 Free";
-  font-weight: 900;
-  font-size: 20px;
-  margin-right: 10px;
-}
-.spoiler {
-  background-color: transparent;
-  color: transparent;
-  user-select: none;
-}
-.spoiler:active {
-  background-color: inherit;
-  color: inherit;
+.page {
+    position: relative;
+    z-index: 1;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 28px 20px 40px;
 }
 
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+/* ─── Header ─── */
+.header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+    animation: slideDown 0.5s ease both;
 }
-::-webkit-scrollbar-track {
-  background-color: transparent;
+
+.header img {
+    width: 48px;
+    height: 48px;
+    image-rendering: pixelated;
+    border-radius: 10px;
 }
-::-webkit-scrollbar-thumb {
-  border-radius: 10px;
+
+.header-text h1 {
+    font-family: "Space Mono", monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
 }
-::-webkit-scrollbar-corner {
-  background-color: transparent;
+
+.header-text p {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 1px;
 }
-::-webkit-scrollbar-thumb {
-  background-color: transparent;
+
+.invite-btn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-family: "Space Mono", monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 6px;
+    white-space: nowrap;
+    transition:
+        background 0.15s,
+        transform 0.1s;
+    letter-spacing: 0.3px;
+}
+.invite-btn:hover {
+    background: var(--accent2);
+    transform: translateY(-1px);
+}
+
+/* ─── Section label ─── */
+.label {
+    font-family: "Space Mono", monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+}
+
+/* ─── Feature grid ─── */
+.features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.5s 0.1s ease both;
+}
+
+.feature {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    transition: border-color 0.2s;
+    position: relative;
+}
+.feature:hover {
+    border-color: var(--accent);
+}
+
+.feature.vote {
+    border-color: rgba(255, 214, 53, 0.2);
+}
+.feature.vote:hover {
+    border-color: var(--gold);
+}
+
+.vote-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: "Space Mono", monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: rgba(255, 214, 53, 0.1);
+    border: 1px solid rgba(255, 214, 53, 0.25);
+    border-radius: 3px;
+    padding: 2px 6px;
+    margin-bottom: 8px;
+    width: fit-content;
+}
+
+.feature-icon {
+    font-size: 20px;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.feature h3 {
+    font-family: "Space Mono", monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.feature p {
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.feature p a {
+    color: var(--gold);
+    text-decoration: none;
+}
+.feature p a:hover {
+    text-decoration: underline;
+}
+
+.feature p code,
+.step p code {
+    font-family: "Space Mono", monospace;
+    font-size: 10.5px;
+    background: rgba(88, 101, 242, 0.12);
+    color: var(--accent2);
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+
+/* ─── Steps ─── */
+.steps {
+    margin-bottom: 24px;
+    animation: fadeUp 0.5s 0.2s ease both;
+}
+
+.step {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+.step:last-child {
+    border-bottom: none;
+}
+
+.step-num {
+    font-family: "Space Mono", monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    background: rgba(88, 101, 242, 0.1);
+    border: 1px solid rgba(88, 101, 242, 0.3);
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.step p {
+    font-size: 12.5px;
+    color: var(--text);
+}
+
+/* ─── Examples ─── */
+.examples {
+    margin-bottom: 24px;
+    animation: fadeUp 0.5s 0.3s ease both;
+}
+
+.examples-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.example-card,
+.example-wide {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.example-card p,
+.example-wide p {
+    font-family: "Space Mono", monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    padding: 8px 10px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.example-card img,
+.example-wide img {
+    width: 100%;
+    display: block;
+    image-rendering: pixelated;
+}
+
+/* ─── Footer ─── */
+footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    animation: fadeUp 0.5s 0.4s ease both;
+}
+
+footer a {
+    color: var(--muted);
+    text-decoration: none;
+}
+footer a:hover {
+    color: var(--text);
+}
+
+/* ─── Animations ─── */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
