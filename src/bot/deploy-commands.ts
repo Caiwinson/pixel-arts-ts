@@ -3,8 +3,15 @@ import { createCommandData as createCommand } from "./commands/create.js";
 import { recreateCommandData as recreateCommand } from "./commands/recreate.js";
 import { DISCORD_TOKEN } from "../constants.js";
 import { application } from "./bot.js";
+import { helpCommandData, voteCommandData, inviteCommandData } from "./commands/meta.js";
 
-const commands = [createCommand.toJSON(), recreateCommand.toJSON()];
+const commands = [
+    createCommand.toJSON(),
+    recreateCommand.toJSON(),
+    helpCommandData.toJSON(),
+    voteCommandData.toJSON(),
+    inviteCommandData.toJSON(),
+];
 
 const rest = new REST({ version: "10" }).setToken(DISCORD_TOKEN!);
 
