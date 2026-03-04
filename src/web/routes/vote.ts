@@ -3,8 +3,16 @@ import { recordVote } from "../../database.js";
 import { TOPGG_WEBHOOK } from "../../constants.js";
 import { Router, type Request, type Response, raw } from "express";
 import { sendWebhookMessage } from "../services/webhook.js";
+import rateLimit from "express-rate-limit";
 
 const voteRouter = Router();
+
+const topggLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 60, // limit each IP to 60 requests per window
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 /**
  * Verifies Top.gg webhook signature (V2)
@@ -49,6 +57,7 @@ function verifySignature(
 // Top.gg webhook endpoint
 voteRouter.post(
     "/topgg-webhook",
+    topggLimiter,
     // Use raw parser only for this route
     raw({ type: "application/json" }),
     async (req: Request, res: Response) => {
