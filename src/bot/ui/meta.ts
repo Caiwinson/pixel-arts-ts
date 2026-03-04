@@ -21,11 +21,33 @@ async function resolveCanvasMessage(
         return interaction.message;
     }
 
-    try {
-        return await interaction.channel?.messages.fetch({
-            message: interaction.message.reference?.messageId!,
-            force: true,
+    const referenceId = interaction.message.reference?.messageId;
+    if (!referenceId) {
+        await interaction.reply({
+            content:
+                "No canvas found. It may have been deleted or is no longer available.",
+            flags: MessageFlags.Ephemeral,
         });
+        return null;
+    }
+
+    try {
+        // Try channel fetch first, fall back to client fetch for DMs
+        const message =
+            (await interaction.channel?.messages.fetch({
+                message: referenceId,
+                force: true,
+            })) ??
+            (await interaction.client.channels
+                .fetch(interaction.channelId!)
+                .then((ch) =>
+                    ch?.isTextBased()
+                        ? ch.messages.fetch(referenceId)
+                        : null,
+                ));
+
+        if (!message) throw new Error("Message not found");
+        return message;
     } catch {
         await interaction.reply({
             content:

@@ -441,7 +441,7 @@ export async function colourMenuExecute(
     const type = interaction.customId.split(":")[1]!;
 
     if (type === "basic") {
-        await submitted.message?.edit({
+        await submitted.editReply({
             components: await createColourPickerView(hex, list),
         });
     } else {
@@ -456,7 +456,7 @@ export async function colourMenuExecute(
         const toolsEnabled = !getStringSelectById(interaction.message, "tool")
             ?.disabled;
 
-        await submitted.message?.edit({
+        await submitted.editReply({
             components: await createAdvanceView(
                 size,
                 selection.x,

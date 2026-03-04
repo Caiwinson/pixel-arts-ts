@@ -115,15 +115,20 @@ export default {
 
             if (!interaction.isRepliable()) return;
 
-            const reply = {
-                content: "Something went wrong.",
-                flag: MessageFlags.Ephemeral,
-            };
-
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(reply).catch(() => {});
+                await interaction
+                    .followUp({
+                        content: "Something went wrong.",
+                        flags: MessageFlags.Ephemeral,
+                    })
+                    .catch(() => {});
             } else {
-                await interaction.reply(reply).catch(() => {});
+                await interaction
+                    .reply({
+                        content: "Something went wrong.",
+                        flags: MessageFlags.Ephemeral,
+                    })
+                    .catch(() => {});
             }
         }
     },

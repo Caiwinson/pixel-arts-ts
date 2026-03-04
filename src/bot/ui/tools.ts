@@ -2,6 +2,7 @@ import {
     LabelBuilder,
     MessageFlags,
     ModalBuilder,
+    ModalSubmitInteraction,
     StringSelectMenuBuilder,
     StringSelectMenuInteraction,
     StringSelectMenuOptionBuilder,
@@ -184,26 +185,26 @@ async function executeToolModal(
 
     await submitted.deferUpdate();
 
-    return { start: startCoords, end: endCoords, colour };
+    return { start: startCoords, end: endCoords, colour, submitted };
 }
 
 async function updateCanvas(
-    interaction: StringSelectMenuInteraction,
+    submitted: ModalSubmitInteraction,
     key: string,
     deltas: string[],
     showsPlot: boolean,
 ) {
     const embeds = await createCanvasEmbed(key, showsPlot);
 
-    await interaction.message.edit({
+    await submitted.editReply({
         embeds: [embeds],
     });
 
     await recordPixelUpdate(
-        interaction.message.id,
+        submitted.message!.id,
         key,
         deltas.join(","),
-        interaction.user.id,
+        submitted.user.id,
     );
 }
 
@@ -232,7 +233,7 @@ async function handleLine(interaction: StringSelectMenuInteraction) {
     const result = await executeToolModal("Line Tool", interaction, size);
     if (!result) return;
 
-    const { start, end, colour } = result;
+    const { start, end, colour, submitted } = result;
 
     let pixels = key.match(/.{6}/g)!;
 
@@ -266,10 +267,9 @@ async function handleLine(interaction: StringSelectMenuInteraction) {
         }
     }
 
-    // Optional: update canvas state
     const newKey = pixels.join("");
 
-    await updateCanvas(interaction, newKey, deltas, showsPlot);
+    await updateCanvas(submitted, newKey, deltas, showsPlot);
 }
 
 async function handleRectangle(interaction: StringSelectMenuInteraction) {
@@ -282,7 +282,7 @@ async function handleRectangle(interaction: StringSelectMenuInteraction) {
     const result = await executeToolModal("Rectangle Tool", interaction, size);
     if (!result) return;
 
-    const { start, end, colour } = result;
+    const { start, end, colour, submitted } = result;
 
     let pixels = key.match(/.{6}/g)!;
     const deltas: string[] = [];
@@ -304,7 +304,7 @@ async function handleRectangle(interaction: StringSelectMenuInteraction) {
     }
 
     const newKey = pixels.join("");
-    await updateCanvas(interaction, newKey, deltas, showsPlot);
+    await updateCanvas(submitted, newKey, deltas, showsPlot);
 }
 
 async function handleRectangleOutline(
@@ -319,7 +319,7 @@ async function handleRectangleOutline(
     const result = await executeToolModal("Outline Tool", interaction, size);
     if (!result) return;
 
-    const { start, end, colour } = result;
+    const { start, end, colour, submitted } = result;
 
     let pixels = key.match(/.{6}/g)!;
     const deltas: string[] = [];
@@ -345,7 +345,7 @@ async function handleRectangleOutline(
     }
 
     const newKey = pixels.join("");
-    await updateCanvas(interaction, newKey, deltas, showsPlot);
+    await updateCanvas(submitted, newKey, deltas, showsPlot);
 }
 
 async function BucketFillModal(
@@ -449,7 +449,7 @@ async function handleBucketFill(interaction: StringSelectMenuInteraction) {
     }
 
     const newKey = pixels.join("");
-    await updateCanvas(interaction, newKey, deltas, showsPlot);
+    await updateCanvas(submitted, newKey, deltas, showsPlot);
 }
 
 async function ReplaceColourModal(
@@ -536,7 +536,7 @@ async function handleReplaceColour(interaction: StringSelectMenuInteraction) {
     if (deltas.length === 0) return;
 
     const newKey = pixels.join("");
-    await updateCanvas(interaction, newKey, deltas, showsPlot);
+    await updateCanvas(submitted, newKey, deltas, showsPlot);
 }
 
 async function handlePlot(interaction: StringSelectMenuInteraction) {
