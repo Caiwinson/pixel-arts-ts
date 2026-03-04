@@ -1,18 +1,42 @@
 import { ShardingManager } from "discord.js";
 import { DISCORD_TOKEN } from "./constants.js";
 import app from "./web/server.js";
-import { initDb } from "./database.js";
+import { initDb, closeDb } from "./database.js";
 
 const MODE = process.env.APP_MODE;
 
-initDb();
+await initDb();
+
+function handleShutdown(signal: string, shutdown: () => Promise<void>) {
+    process.on(signal, async () => {
+        console.log(`\n🛑 Received ${signal}, shutting down gracefully...`);
+        try {
+            await shutdown();
+            console.log("✅ Shutdown complete.");
+            process.exit(0);
+        } catch (err) {
+            console.error("❌ Error during shutdown:", err);
+            process.exit(1);
+        }
+    });
+}
 
 async function startWeb() {
     app.set("trust proxy", 1);
 
-    app.listen(8080, () => {
+    const server = app.listen(8080, () => {
         console.log("🌐 Web server listening on port 8080");
     });
+
+    const shutdown = async () => {
+        await new Promise<void>((resolve, reject) => {
+            server.close((err) => (err ? reject(err) : resolve()));
+        });
+        await closeDb();
+    };
+
+    handleShutdown("SIGTERM", shutdown);
+    handleShutdown("SIGINT", shutdown);
 }
 
 async function startBot() {
@@ -25,18 +49,27 @@ async function startBot() {
         console.log(`🚀 Shard ${shard.id} launched`);
     });
 
+    const shutdown = async () => {
+        console.log("🔌 Killing all shards...");
+        manager.shards.forEach((shard) => shard.kill());
+        await closeDb();
+    };
+
+    handleShutdown("SIGTERM", shutdown);
+    handleShutdown("SIGINT", shutdown);
+
     await manager.spawn();
 }
 
 switch (MODE) {
     case "web":
         console.log("Starting WEB mode");
-        startWeb();
+        await startWeb();
         break;
 
     case "bot":
         console.log("Starting BOT mode");
-        startBot();
+        await startBot();
         break;
 
     default:
