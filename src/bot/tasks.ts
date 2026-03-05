@@ -14,24 +14,28 @@ const STATUSES: { name: string; type: ActivityType }[] = [
     { name: "Masterpieces being created", type: ActivityType.Watching },
     { name: "Art is life", type: ActivityType.Playing },
     { name: "Microsoft Paint", type: ActivityType.Playing },
-    { name: "Paints dry.", type: ActivityType.Playing },
+    { name: "Paint dry.", type: ActivityType.Watching },
 ];
 
-async function getDynamicStatus(
-    client: Client,
-): Promise<{ name: string; type: ActivityType }> {
-    let guildCount: number;
+async function getGuildCount(client: Client): Promise<number> {
     if (client.shard) {
         const counts = await client.shard
             .fetchClientValues("guilds.cache.size")
             .catch(() => null);
-        guildCount = counts
+        return counts
             ? (counts as number[]).reduce((a, b) => a + b, 0)
-            : client.guilds.cache.size;
-    } else {
-        guildCount = client.guilds.cache.size;
+            : (await client.guilds.fetch()).size;
     }
-    const canvasCount = await getCanvasCount();
+    return (await client.guilds.fetch()).size;
+}
+
+async function getDynamicStatus(
+    client: Client,
+): Promise<{ name: string; type: ActivityType }> {
+    const [canvasCount, guildCount] = await Promise.all([
+        getCanvasCount(),
+        getGuildCount(client),
+    ]);
     return {
         name: `${canvasCount} Canvases, ${guildCount} guilds`,
         type: ActivityType.Watching,
@@ -40,8 +44,6 @@ async function getDynamicStatus(
 
 export async function rotateStatus(client: Client): Promise<void> {
     try {
-        // 1 in 10 chance to show the dynamic status (mirrors Python's random.choice
-        // over a list that includes the dynamic entry)
         const useDynamic = Math.random() < 1 / (STATUSES.length + 1);
 
         const status = useDynamic
@@ -62,20 +64,9 @@ export async function postTopggStats(client: Client): Promise<void> {
         return;
     }
 
-    // Aggregate shard guild counts if sharding, otherwise use cache directly
-    let guildCount: number;
-    if (client.shard) {
-        const counts = await client.shard
-            .fetchClientValues("guilds.cache.size")
-            .catch(() => null);
-        guildCount = counts
-            ? (counts as number[]).reduce((a, b) => a + b, 0)
-            : client.guilds.cache.size;
-    } else {
-        guildCount = client.guilds.cache.size;
-    }
-
     try {
+        const guildCount = await getGuildCount(client);
+
         const res = await fetch(
             "https://top.gg/api/bots/1008692736720908318/stats",
             {
@@ -102,15 +93,13 @@ export async function postTopggStats(client: Client): Promise<void> {
 
 // ---- Task Runner ----
 
-const STATUS_INTERVAL_MS = 60_000; // 1 minute
-const TOPGG_INTERVAL_MS = 30 * 60_000; // 30 minutes
+const STATUS_INTERVAL_MS = 60_000;       // 1 minute
+const TOPGG_INTERVAL_MS = 30 * 60_000;  // 30 minutes
 
 export function startTasks(client: Client): void {
-    // Status: run immediately, then every minute
     rotateStatus(client);
     setInterval(() => rotateStatus(client), STATUS_INTERVAL_MS);
 
-    // Top.gg: run after 1 minute (let cache warm up), then every 30 minutes
     setTimeout(() => {
         postTopggStats(client);
         setInterval(() => postTopggStats(client), TOPGG_INTERVAL_MS);
