@@ -88,6 +88,30 @@
     const speedSlider = document.getElementById('speedSlider');
     const sliderReadout = document.getElementById('sliderReadout');
 
+    // Detect vsync cap via a quick rAF timing sample
+    async function detectVsyncFps() {
+        return new Promise(resolve => {
+            const samples = [];
+            let last = null;
+            let count = 0;
+            function tick(ts) {
+                if (last !== null) samples.push(ts - last);
+                last = ts;
+                if (++count < 10) {
+                    requestAnimationFrame(tick);
+                } else {
+                    const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+                    // Round to nearest common refresh rate
+                    const raw = 1000 / avg;
+                    const common = [30, 60, 90, 120, 144, 165, 240];
+                    const nearest = common.reduce((a, b) => Math.abs(b - raw) < Math.abs(a - raw) ? b : a);
+                    resolve(nearest);
+                }
+            }
+            requestAnimationFrame(tick);
+        });
+    }
+
     let frames = [];
     let size = 0;
     let scale = 1;
@@ -97,6 +121,7 @@
     let totalFrames = 0;
     let rafId = null;
     let lastTimestamp = null;
+    let vsyncFps = 60; // default, replaced after detection
 
     function updateDownloadLink() {
         dlBtn.href = `/download/${messageId}-${fps}`;
@@ -154,7 +179,6 @@
     statTotal.textContent = totalFrames;
     statSize.textContent = `${size}×${size}`;
 
-    // Slider max = totalFrames so all frames play in 1 second at max
     speedSlider.max = totalFrames;
     speedSlider.value = 1;
 
@@ -171,19 +195,34 @@
     }
 
     renderFrame(0);
+
+    // Detect vsync before allowing playback
+    loadingText.textContent = 'Detecting display…';
+    vsyncFps = await detectVsyncFps();
     loadingOverlay.classList.add('hidden');
 
     // ---- Animate loop ----
+    // When fps > vsyncFps, we can't render every frame in real time.
+    // Instead we advance by multiple logical frames per rAF tick so that
+    // playback duration stays correct — we just skip intermediate frames.
     function animate(ts) {
         if (!playing) return;
         if (lastTimestamp === null) lastTimestamp = ts;
 
         const elapsed = ts - lastTimestamp;
-        const interval = 1000 / fps;
 
-        if (elapsed >= interval) {
-            lastTimestamp = ts + (elapsed - interval);
-            renderFrame((currentFrame + 1) % totalFrames);
+        // How many logical frames should have passed since last rAF tick?
+        // At fps <= vsyncFps this is <=1 on average (same as before).
+        // At fps > vsyncFps this becomes >1, so we skip ahead correctly.
+        const framesElapsed = (elapsed / 1000) * fps;
+
+        if (framesElapsed >= 1) {
+            lastTimestamp = ts;
+            // Advance by the integer number of frames that have elapsed,
+            // clamped so we never skip past the end in one jump.
+            const step = Math.max(1, Math.round(framesElapsed));
+            const next = (currentFrame + step) % totalFrames;
+            renderFrame(next);
         }
 
         rafId = requestAnimationFrame(animate);
@@ -208,9 +247,21 @@
         fps = Math.max(1, Math.min(value, totalFrames));
         speedSlider.value = fps;
         const secs = (totalFrames / fps).toFixed(1);
-        sliderReadout.textContent = fps >= totalFrames
-            ? `${fps} fps (~1s)`
-            : `${fps} fps (${secs}s)`;
+
+        let label;
+        if (fps >= vsyncFps) {
+            // Show that we're above vsync and will be skipping frames
+            const skipRatio = Math.round(fps / vsyncFps);
+            label = fps >= totalFrames
+                ? `${fps} fps (~1s, skip ${skipRatio - 1})`
+                : `${fps} fps (${secs}s, skip ${skipRatio - 1})`;
+        } else {
+            label = fps >= totalFrames
+                ? `${fps} fps (~1s)`
+                : `${fps} fps (${secs}s)`;
+        }
+
+        sliderReadout.textContent = label;
         lastTimestamp = null;
         updateDownloadLink();
     }
