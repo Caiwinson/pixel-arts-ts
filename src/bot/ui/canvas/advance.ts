@@ -8,18 +8,15 @@ import {
     StringSelectMenuInteraction,
     StringSelectMenuOptionBuilder,
 } from "discord.js";
-import { createColourPickerMenu, getColourList } from "./colour.js";
+import { createColourMenu, getColourList } from "../interactions/colour.js";
 import {
     createCanvasEmbed,
     ensureOwner,
     getCanvasKey,
     getStringSelectById,
-} from "../utils.js";
-import {
-    recordPixelUpdate,
-    getUserColour,
-} from "../../database.js";
-import { createToolMenu } from "./tools.js";
+} from "../../utils.js";
+import { recordPixelUpdate, getUserColour } from "../../../database.js";
+import { createToolMenu } from "../interactions/tools.js";
 
 type PixelSelection = {
     x: number;
@@ -72,12 +69,12 @@ function createRowOptions(
     return options;
 }
 
-export async function createAdvanceView(
+export async function createAdvanceCanvasView(
     size: number,
     defaultX: number = 1,
     defaultY: number = 1,
     defaultHex: string,
-    extra_colours: string[] = [],
+    extraColours: string[] = [],
     showsTool: boolean = true,
 ) {
     // X SELECT MENU
@@ -98,11 +95,7 @@ export async function createAdvanceView(
         yMenu,
     );
 
-    const cMenu = await createColourPickerMenu(
-        defaultHex,
-        "advanced",
-        extra_colours,
-    );
+    const cMenu = await createColourMenu(defaultHex, "advanced", extraColours);
 
     const cRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
         cMenu,
@@ -219,7 +212,7 @@ export async function placePixelExecute(interaction: ButtonInteraction) {
 
     await interaction.update({
         embeds: [embeds],
-        components: await createAdvanceView(
+        components: await createAdvanceCanvasView(
             size,
             selection.x,
             selection.y,
@@ -263,7 +256,7 @@ export async function toggleToolExecute(interaction: ButtonInteraction) {
     const colour = await getUserColour(interaction.user.id);
 
     await interaction.update({
-        components: await createAdvanceView(
+        components: await createAdvanceCanvasView(
             size,
             selection.x,
             selection.y,

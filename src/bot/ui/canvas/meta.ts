@@ -9,9 +9,9 @@ import {
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
 } from "discord.js";
-import { getCanvasHistory, revertLastPixel } from "../../database.js";
-import { createCanvasEmbed, ensureOwner, getCanvasKey } from "../utils.js";
-import { createClosedView } from "./closed.js";
+import { getCanvasHistory, revertLastPixel } from "../../../database.js";
+import { createCanvasEmbed, ensureOwner, getCanvasKey } from "../../utils.js";
+import { createClosedCanvasView } from "../interactions/closed.js";
 
 async function resolveCanvasMessage(
     interaction: ButtonInteraction,
@@ -41,9 +41,7 @@ async function resolveCanvasMessage(
             (await interaction.client.channels
                 .fetch(interaction.channelId!)
                 .then((ch) =>
-                    ch?.isTextBased()
-                        ? ch.messages.fetch(referenceId)
-                        : null,
+                    ch?.isTextBased() ? ch.messages.fetch(referenceId) : null,
                 ));
 
         if (!message) throw new Error("Message not found");
@@ -134,7 +132,7 @@ export async function closeExecute(interaction: ButtonInteraction) {
 
         await message.edit({
             content: "Canvas closed.",
-            components: createClosedView(),
+            components: createClosedCanvasView(),
         });
     } else {
         const url = message.embeds?.[0]?.image?.url!;
@@ -146,7 +144,7 @@ export async function closeExecute(interaction: ButtonInteraction) {
         await message.edit({
             content: "Canvas closed.",
             embeds: [embed],
-            components: createClosedView(),
+            components: createClosedCanvasView(),
         });
     }
 }

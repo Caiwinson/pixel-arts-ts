@@ -5,7 +5,10 @@ import {
     MessageFlags,
     ModalSubmitInteraction,
 } from "discord.js";
-import { createCanvasView, createColourPickerView } from "../ui/basic.js";
+import {
+    createBasicCanvasView,
+    createBasicColourView,
+} from "../ui/canvas/basic.js";
 import { checkVote, createCanvasEmbed } from "../utils.js";
 import { COLOUR_OPTION } from "../../constants.js";
 import {
@@ -13,8 +16,8 @@ import {
     recordPixelUpdate,
     getUserColour,
 } from "../../database.js";
-import { createColourModal } from "../ui/colour.js";
-import { createAdvanceView } from "../ui/advance.js";
+import { createColourModal } from "../ui/interactions/colour.js";
+import { createAdvanceCanvasView } from "../ui/canvas/advance.js";
 
 const colourChoices = [
     ...Object.entries(COLOUR_OPTION).map(([name, data]) => ({
@@ -146,7 +149,7 @@ export async function createCommandExecute(
         await interaction.reply({
             content: `${interaction.user} has created a canvas.`,
             embeds: [embed],
-            components: createCanvasView(),
+            components: createBasicCanvasView(),
             withResponse: true,
         });
 
@@ -154,7 +157,7 @@ export async function createCommandExecute(
 
         await interaction.followUp({
             content: "Pick a colour!",
-            components: await createColourPickerView(defaultHex),
+            components: await createBasicColourView(defaultHex),
         });
 
         await recordPixelUpdate(message.id, key, null, interaction.user.id);
@@ -163,7 +166,7 @@ export async function createCommandExecute(
         await interaction.reply({
             content: `${interaction.user} has created a canvas.`,
             embeds: [embed],
-            components: await createAdvanceView(
+            components: await createAdvanceCanvasView(
                 size,
                 1,
                 1,

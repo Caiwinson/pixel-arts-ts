@@ -9,14 +9,14 @@ import {
     StringSelectMenuInteraction,
     StringSelectMenuOptionBuilder,
 } from "discord.js";
-import { getCanvasHistory, type CanvasHistoryRow } from "../../database.js";
+import { getCanvasHistory, type CanvasHistoryRow } from "../../../database.js";
 import { spawn } from "child_process";
 import path from "path";
 import os from "os";
 import fs from "fs";
-import { DOMAIN_URL, PREVIEW_PATH } from "../../constants.js";
+import { DOMAIN_URL, PREVIEW_PATH } from "../../../constants.js";
 
-export function createClosedView(): ActionRowBuilder<ButtonBuilder>[] {
+export function createClosedCanvasView(): ActionRowBuilder<ButtonBuilder>[] {
     const download = new ButtonBuilder()
         .setCustomId("download")
         .setLabel("Download")

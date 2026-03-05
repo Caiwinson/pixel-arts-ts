@@ -10,7 +10,7 @@ import {
 } from "discord.js";
 import { EMBED_COLOUR, DOMAIN_URL } from "../constants.js";
 import { getImageHash, hasUserVoted, saveImageHash } from "../database.js";
-import { createVoteView } from "./ui/meta.js";
+import { createVoteView } from "./ui/canvas/meta.js";
 
 export function hexToInt(hex: string): number {
     // Remove leading "#" if present
@@ -18,7 +18,10 @@ export function hexToInt(hex: string): number {
     return parseInt(hex, 16);
 }
 
-export async function createCanvasEmbed(key: string, showPlot = false): Promise<EmbedBuilder> {
+export async function createCanvasEmbed(
+    key: string,
+    showPlot = false,
+): Promise<EmbedBuilder> {
     // Validate key (matches Python logic)
     if (!key || key.length === 0) {
         throw new Error("Invalid key");
@@ -100,7 +103,10 @@ export async function ensureOwner(
 }
 
 export async function checkVote(
-    interaction: ButtonInteraction | StringSelectMenuInteraction | ChatInputCommandInteraction,
+    interaction:
+        | ButtonInteraction
+        | StringSelectMenuInteraction
+        | ChatInputCommandInteraction,
 ): Promise<boolean> {
     const voted = await hasUserVoted(interaction.user.id);
 
@@ -112,9 +118,7 @@ export async function checkVote(
             "This is a vote-only feature.\n\nPlease vote for <@1008692736720908318> to use it.",
         )
         .setColor(EMBED_COLOUR)
-        .setImage(
-            `${DOMAIN_URL}/static/vote.png`
-        );
+        .setImage(`${DOMAIN_URL}/static/vote.png`);
 
     await interaction.reply({
         embeds: [embed],

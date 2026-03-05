@@ -8,20 +8,20 @@ import {
 } from "discord.js";
 
 import { createCommandExecute } from "./commands/create.js";
-import { pixelButtonExecute } from "./ui/basic.js";
-import { closeExecute, undoCanvasExecute } from "./ui/meta.js";
-import { colourMenuExecute } from "./ui/colour.js";
+import { pixelExecute } from "./ui/canvas/basic.js";
+import { closeExecute, undoCanvasExecute } from "./ui/canvas/meta.js";
+import { colourMenuExecute } from "./ui/interactions/colour.js";
 import {
     downloadButtonExecute,
     timelapseButtonExecute,
     timelapseSelectExecute,
-} from "./ui/closed.js";
+} from "./ui/interactions/closed.js";
 import {
     placePixelExecute,
     rowOptionsExecute,
     toggleToolExecute,
-} from "./ui/advance.js";
-import { toolExecute } from "./ui/tools.js";
+} from "./ui/canvas/advance.js";
+import { toolExecute } from "./ui/interactions/tools.js";
 import { recreateCommandExecute } from "./commands/recreate.js";
 import {
     helpCommandExecute,
@@ -33,7 +33,7 @@ import { handleLegacyInteraction } from "./legacyHandler.js";
 // Dispatch maps
 const buttonHandlers: Record<string, (i: ButtonInteraction) => Promise<void>> =
     {
-        pb: pixelButtonExecute as (i: ButtonInteraction) => Promise<void>,
+        pb: pixelExecute as (i: ButtonInteraction) => Promise<void>,
         cl: closeExecute as (i: ButtonInteraction) => Promise<void>,
         ud: undoCanvasExecute as (i: ButtonInteraction) => Promise<void>,
         download: downloadButtonExecute as (

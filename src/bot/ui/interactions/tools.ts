@@ -14,10 +14,10 @@ import {
     ensureOwner,
     getCanvasKey,
     getStringSelectById,
-} from "../utils.js";
-import { createColourPickerMenu, getColourList } from "./colour.js";
-import { recordPixelUpdate, getUserColour } from "../../database.js";
-import { parseCanvasState } from "./advance.js";
+} from "../../utils.js";
+import { createColourMenu, getColourList } from "./colour.js";
+import { recordPixelUpdate, getUserColour } from "../../../database.js";
+import { parseCanvasState } from "../canvas/advance.js";
 
 export function createToolMenu(
     showsTool: boolean = false,
@@ -116,7 +116,7 @@ async function createToolModal(
     const colourLabel = new LabelBuilder()
         .setLabel("Pick a colour")
         .setStringSelectMenuComponent(
-            await createColourPickerMenu(colour, "modal", colourList),
+            await createColourMenu(colour, "modal", colourList),
         );
 
     modal.addLabelComponents(startLabel, endLabel, colourLabel);
@@ -377,7 +377,7 @@ async function BucketFillModal(
     const colourLabel = new LabelBuilder()
         .setLabel("Pick a colour")
         .setStringSelectMenuComponent(
-            await createColourPickerMenu(colour, "modal", colourList),
+            await createColourMenu(colour, "modal", colourList),
         );
 
     modal.addLabelComponents(fillLabel, colourLabel);
@@ -468,17 +468,17 @@ async function ReplaceColourModal(
     const oldLabel = new LabelBuilder()
         .setLabel("Pick a colour to replace")
         .setStringSelectMenuComponent(
-            (
-                await createColourPickerMenu("000000", "modal", colourList)
-            ).setCustomId("old"),
+            (await createColourMenu("000000", "modal", colourList)).setCustomId(
+                "old",
+            ),
         );
 
     const newLabel = new LabelBuilder()
         .setLabel("Pick a new colour")
         .setStringSelectMenuComponent(
-            (
-                await createColourPickerMenu(colour, "modal", colourList)
-            ).setCustomId("new"),
+            (await createColourMenu(colour, "modal", colourList)).setCustomId(
+                "new",
+            ),
         );
 
     modal.addLabelComponents(oldLabel, newLabel);

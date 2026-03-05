@@ -3,9 +3,12 @@ import {
     StringSelectMenuInteraction,
     type Interaction,
 } from "discord.js";
-import { createClosedView } from "./ui/closed.js";
-import { createCanvasView, createColourPickerView } from "./ui/basic.js";
-import { createAdvanceView } from "./ui/advance.js";
+import { createClosedCanvasView } from "./ui/interactions/closed.js";
+import {
+    createBasicCanvasView,
+    createBasicColourView,
+} from "./ui/canvas/basic.js";
+import { createAdvanceCanvasView } from "./ui/canvas/advance.js";
 import { getUserColour } from "../database.js";
 import { getCanvasKey, getStringSelectById } from "./utils.js";
 
@@ -79,7 +82,7 @@ async function rebuildClosedView(
     interaction: ButtonInteraction | StringSelectMenuInteraction,
 ): Promise<void> {
     await interaction.message.edit({
-        components: createClosedView(),
+        components: createClosedCanvasView(),
     });
 }
 
@@ -87,7 +90,7 @@ async function rebuildBasicView(
     interaction: ButtonInteraction | StringSelectMenuInteraction,
 ): Promise<void> {
     await interaction.message.edit({
-        components: createCanvasView(),
+        components: createBasicCanvasView(),
     });
 }
 
@@ -96,7 +99,7 @@ async function rebuildColourPickerView(
 ): Promise<void> {
     const defaultHex = await getUserColour(interaction.user.id);
     await interaction.message.edit({
-        components: await createColourPickerView(defaultHex),
+        components: await createBasicColourView(defaultHex),
     });
 }
 
@@ -111,7 +114,14 @@ async function rebuildAdvancedView(
     const defaultHex = await getUserColour(interaction.user.id);
 
     await interaction.message.edit({
-        components: await createAdvanceView(size, 1, 1, defaultHex, [], true),
+        components: await createAdvanceCanvasView(
+            size,
+            1,
+            1,
+            defaultHex,
+            [],
+            true,
+        ),
     });
 }
 

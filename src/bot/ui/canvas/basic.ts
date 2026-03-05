@@ -1,9 +1,9 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 import type { ButtonInteraction, StringSelectMenuBuilder } from "discord.js";
-import { createCanvasEmbed, getCanvasKey } from "../utils.js";
-import { recordPixelUpdate, getUserColour } from "../../database.js";
-import { createColourPickerMenu } from "./colour.js";
+import { createCanvasEmbed, getCanvasKey } from "../../utils.js";
+import { recordPixelUpdate, getUserColour } from "../../../database.js";
+import { createColourMenu } from "../interactions/colour.js";
 
 // Generate a row of buttons
 function createCanvasRow(
@@ -22,7 +22,7 @@ function createCanvasRow(
     return row;
 }
 
-export function createCanvasView(): ActionRowBuilder<ButtonBuilder>[] {
+export function createBasicCanvasView(): ActionRowBuilder<ButtonBuilder>[] {
     const rows: ActionRowBuilder<ButtonBuilder>[] = [];
     let id = 0;
 
@@ -35,7 +35,7 @@ export function createCanvasView(): ActionRowBuilder<ButtonBuilder>[] {
     return rows;
 }
 
-export async function pixelButtonExecute(interaction: ButtonInteraction) {
+export async function pixelExecute(interaction: ButtonInteraction) {
     const url = interaction.message.embeds?.[0]?.image?.url;
     const key = await getCanvasKey(url!);
 
@@ -53,17 +53,13 @@ export async function pixelButtonExecute(interaction: ButtonInteraction) {
     );
 }
 
-export async function createColourPickerView(
+export async function createBasicColourView(
     defaultHex: string,
-    extra_colours: string[] = [],
+    extraColours: string[] = [],
 ): Promise<
     [ActionRowBuilder<StringSelectMenuBuilder>, ActionRowBuilder<ButtonBuilder>]
 > {
-    const menu = await createColourPickerMenu(
-        defaultHex,
-        "basic",
-        extra_colours,
-    );
+    const menu = await createColourMenu(defaultHex, "basic", extraColours);
 
     const selectRow =
         new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(menu);

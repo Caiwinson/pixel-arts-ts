@@ -15,8 +15,8 @@ import {
     type Emoji,
 } from "discord.js";
 
-import { application } from "../bot.js";
-import { COLOUR_OPTION } from "../../constants.js";
+import { application } from "../../bot.js";
+import { COLOUR_OPTION } from "../../../constants.js";
 import {
     setUserColour,
     getEmojiByHex,
@@ -24,10 +24,13 @@ import {
     deleteEmojiRecord,
     getEmojiCount,
     getOldestNonPresetEmoji,
-} from "../../database.js";
-import { createColourPickerView } from "./basic.js";
-import { createAdvanceView, getUserSelection } from "./advance.js";
-import { checkVote, getStringSelectById } from "../utils.js";
+} from "../../../database.js";
+import { createBasicColourView } from "../canvas/basic.js";
+import {
+    createAdvanceCanvasView,
+    getUserSelection,
+} from "../canvas/advance.js";
+import { checkVote, getStringSelectById } from "../../utils.js";
 
 /* ------------------------------------------------ */
 /*                    CONSTANTS                     */
@@ -180,7 +183,9 @@ async function ensureEmojiCapacity() {
         try {
             await application.emojis.delete(emojiId);
         } catch (err) {
-            console.warn(`Failed to delete emoji ${oldest.hex} from Discord: ${err}`);
+            console.warn(
+                `Failed to delete emoji ${oldest.hex} from Discord: ${err}`,
+            );
         }
     }
 
@@ -222,10 +227,10 @@ async function createEmoji(hex: string): Promise<Emoji> {
 /*              COLOUR PICKER CREATION             */
 /* ------------------------------------------------ */
 
-export async function createColourPickerMenu(
+export async function createColourMenu(
     defaultHex: string,
     uiType: "basic" | "advanced" | "modal" = "basic",
-    extra_colours: string[] = [],
+    extraColours: string[] = [],
 ) {
     const options: StringSelectMenuOptionBuilder[] = [];
     const used = new Set<string>();
@@ -261,7 +266,7 @@ export async function createColourPickerMenu(
     }
 
     await Promise.all(
-        extra_colours.map(async (hex) => {
+        extraColours.map(async (hex) => {
             const emoji = await getEmoji(hex);
             await addColour(hex, emoji);
         }),
@@ -374,7 +379,7 @@ export async function colourMenuExecute(
 
     if (type === "basic") {
         await submitted.editReply({
-            components: await createColourPickerView(hex, list),
+            components: await createBasicColourView(hex, list),
         });
     } else {
         const selection = getUserSelection(
@@ -389,7 +394,7 @@ export async function colourMenuExecute(
             ?.disabled;
 
         await submitted.editReply({
-            components: await createAdvanceView(
+            components: await createAdvanceCanvasView(
                 size,
                 selection.x,
                 selection.y,

@@ -8,7 +8,7 @@ import {
     MessageFlags,
 } from "discord.js";
 import { DOMAIN_URL, EMBED_COLOUR } from "../../constants.js";
-import { createVoteView } from "../ui/meta.js";
+import { createVoteView } from "../ui/canvas/meta.js";
 
 // ---- /help ----
 
@@ -26,13 +26,11 @@ export async function helpCommandExecute(
         .addFields(
             {
                 name: "🖼️ /create canvas",
-                value:
-                    "Start a new pixel art canvas. Choose a size (5×5 up to 25×25) and an optional base colour.",
+                value: "Start a new pixel art canvas. Choose a size (5×5 up to 25×25) and an optional base colour.",
             },
             {
                 name: "🔄 /recreate image",
-                value:
-                    "Upload any image and convert it into an editable pixel art canvas.",
+                value: "Upload any image and convert it into an editable pixel art canvas.",
             },
             {
                 name: "🎨 Placing Pixels",
@@ -42,8 +40,7 @@ export async function helpCommandExecute(
             },
             {
                 name: "🛠️ Advanced Tools",
-                value:
-                    "Use the **Tool** menu to access Line, Rectangle, Outline, Bucket Fill, and Replace Colour tools.",
+                value: "Use the **Tool** menu to access Line, Rectangle, Outline, Bucket Fill, and Replace Colour tools.",
             },
             {
                 name: "⏪ Undo",
@@ -51,13 +48,11 @@ export async function helpCommandExecute(
             },
             {
                 name: "📼 Timelapse",
-                value:
-                    "Close a canvas and press **Timelapse** to generate a speed-adjustable replay video.",
+                value: "Close a canvas and press **Timelapse** to generate a speed-adjustable replay video.",
             },
             {
                 name: "⭐ Vote-only features",
-                value:
-                    "Custom colours, 20×25 canvases, and `/recreate` require a vote on Top.gg. Use **/vote** to unlock them.",
+                value: "Custom colours, 20×25 canvases, and `/recreate` require a vote on Top.gg. Use **/vote** to unlock them.",
             },
             {
                 name: "🔗 Links",
