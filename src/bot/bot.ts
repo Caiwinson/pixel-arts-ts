@@ -10,6 +10,7 @@ import { refreshCommands } from "./deploy-commands.js";
 // Import your interaction handler
 import interactionCreate from "./interactionCreate.js";
 import { startTasks } from "./tasks.js";
+import { syncEmojiTable } from "../database.js";
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds],
@@ -17,11 +18,21 @@ const client = new Client({
 export let application: ClientApplication;
 
 // Ready event
-client.once(Events.ClientReady, (c) => {
+client.once(Events.ClientReady, async (c) => {
     application = c.application;
     if (client.shard?.ids.includes(0) ?? true) {
         refreshCommands();
-        startTasks(c);           // ← add this
+        startTasks(c);
+
+        // Sync emoji table from Discord API once on startup
+        try {
+            const emojis = await c.application.emojis.fetch();
+            await syncEmojiTable([...emojis.values()]);
+            console.log(`✅ Synced ${emojis.size} emojis to DB`);
+        } catch (err) {
+            console.error("Failed to sync emoji table:", err);
+        }
+
         console.log(`✅ Logged in as ${c.user.tag}`);
     }
 });

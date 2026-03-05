@@ -1,8 +1,6 @@
 import { Pool } from "pg";
 import crypto from "crypto";
 
-// Configure via environment variables:
-// DATABASE_URL or PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE
 const pool = new Pool({
     host: process.env.POSTGRES_HOST ?? "db",
     port: parseInt(process.env.POSTGRES_PORT ?? "5432"),
@@ -10,8 +8,6 @@ const pool = new Pool({
     password: process.env.POSTGRES_PASSWORD ?? "mypassword",
     database: process.env.POSTGRES_DB ?? "mydb",
 });
-
-// --- Initialization ---
 
 async function initDb(): Promise<void> {
     const schema = `
@@ -49,21 +45,20 @@ async function initDb(): Promise<void> {
         );
 
         INSERT INTO canvas_count (id, count) VALUES (0, 0) ON CONFLICT DO NOTHING;
+
+        CREATE TABLE IF NOT EXISTS emoji (
+            hex TEXT PRIMARY KEY,
+            emoji_string TEXT NOT NULL
+        );
     `;
     await pool.query(schema);
 }
 
-// Run initialization — call and await this before using the module,
-// or call it at app startup: await initDb();
 export { initDb };
-
-// --- Shutdown ---
 
 export async function closeDb(): Promise<void> {
     await pool.end();
 }
-
-// --- Type Definitions ---
 
 export interface CanvasHistoryRow {
     row_id: number;
@@ -74,11 +69,6 @@ export interface CanvasHistoryRow {
     readable_time: string;
 }
 
-// --- Functions ---
-
-/**
- * Appends a pixel update event to the timelapse log.
- */
 export async function recordPixelUpdate(
     messageId: string,
     fkey: string,
@@ -95,7 +85,6 @@ export async function recordPixelUpdate(
             .replace("T", " ")
             .substring(0, 19);
 
-        // Determine row_id
         const maxRowResult = await client.query<{ max_row_id: number | null }>(
             `SELECT MAX(row_id) AS max_row_id FROM timelapse WHERE message_id = $1`,
             [messageId],
@@ -150,9 +139,6 @@ export async function recordPixelUpdate(
     }
 }
 
-/**
- * Retrieves the full history of a canvas.
- */
 export async function getCanvasHistory(
     messageId: string,
 ): Promise<CanvasHistoryRow[]> {
@@ -166,9 +152,6 @@ export async function getCanvasHistory(
     return result.rows;
 }
 
-/**
- * Reverts the last pixel update and returns the reconstructed canvas key.
- */
 export async function revertLastPixel(
     messageId: string,
 ): Promise<string | null> {
@@ -193,7 +176,6 @@ export async function revertLastPixel(
             return rows[0]!.key;
         }
 
-        // Delete the latest row
         await client.query(
             `DELETE FROM timelapse
              WHERE message_id = $1 AND row_id = (
@@ -230,9 +212,6 @@ export async function revertLastPixel(
     }
 }
 
-/**
- * Returns user colour as 6-char hex string like "ff00aa".
- */
 export async function getUserColour(userId: string): Promise<string> {
     const result = await pool.query<{ hex_code: number }>(
         `INSERT INTO colour (user_id, hex_code) VALUES ($1, 0)
@@ -252,9 +231,6 @@ export async function getUserColour(userId: string): Promise<string> {
     return existing.rows[0]!.hex_code.toString(16).padStart(6, "0");
 }
 
-/**
- * Updates user colour using hex string like "ff00aa".
- */
 export async function setUserColour(
     userId: string,
     hexCode: string,
@@ -267,9 +243,6 @@ export async function setUserColour(
     );
 }
 
-/**
- * Gets current canvas count.
- */
 export async function getCanvasCount(): Promise<number> {
     const result = await pool.query<{ count: number }>(
         `SELECT count FROM canvas_count WHERE id = 0`,
@@ -277,9 +250,6 @@ export async function getCanvasCount(): Promise<number> {
     return result.rows[0]?.count ?? 0;
 }
 
-/**
- * Increments canvas count by 1.
- */
 export async function incrementCanvasCount(): Promise<void> {
     await pool.query(
         `INSERT INTO canvas_count (id, count) VALUES (0, 1)
@@ -287,9 +257,6 @@ export async function incrementCanvasCount(): Promise<void> {
     );
 }
 
-/**
- * Hashes an image key and stores it, preventing duplicates.
- */
 export async function saveImageHash(
     key: string,
     size: number,
@@ -305,9 +272,6 @@ export async function saveImageHash(
     return hash;
 }
 
-/**
- * Retrieves an image key from its hash.
- */
 export async function getImageHash(
     hash: string,
 ): Promise<[number, string] | null> {
@@ -329,9 +293,6 @@ export async function getImageHash(
     return isNaN(size) ? null : [size, keyStr];
 }
 
-/**
- * Checks if a user has voted in the last 12 hours.
- */
 export async function hasUserVoted(userId: string): Promise<boolean> {
     const result = await pool.query<{ timestamp: number }>(
         `SELECT timestamp FROM vote WHERE user_id = $1`,
@@ -342,19 +303,87 @@ export async function hasUserVoted(userId: string): Promise<boolean> {
     if (!row) return false;
 
     const currentTs = Math.floor(Date.now() / 1000);
-    return currentTs - row.timestamp < 43200; // 12 hours
+    return currentTs - row.timestamp < 43200;
 }
 
 export async function recordVote(userId: string): Promise<void> {
     const timestamp = Math.floor(Date.now() / 1000);
 
     await pool.query(
-        `
-        INSERT INTO vote (user_id, timestamp)
-        VALUES ($1, $2)
-        ON CONFLICT (user_id)
-        DO UPDATE SET timestamp = EXCLUDED.timestamp
-        `,
+        `INSERT INTO vote (user_id, timestamp)
+         VALUES ($1, $2)
+         ON CONFLICT (user_id)
+         DO UPDATE SET timestamp = EXCLUDED.timestamp`,
         [userId, timestamp],
     );
+}
+
+// ---- Emoji Table ----
+
+export async function syncEmojiTable(
+    emojis: Array<{ name: string | null; toString(): string }>,
+): Promise<void> {
+    const client = await pool.connect();
+    try {
+        await client.query("BEGIN");
+        await client.query("DELETE FROM emoji");
+
+        for (const emoji of emojis) {
+            if (!emoji.name) continue;
+            await client.query(
+                `INSERT INTO emoji (hex, emoji_string) VALUES ($1, $2)
+                 ON CONFLICT (hex) DO UPDATE SET emoji_string = EXCLUDED.emoji_string`,
+                [emoji.name.toLowerCase(), emoji.toString()],
+            );
+        }
+
+        await client.query("COMMIT");
+    } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+export async function getEmojiByHex(hex: string): Promise<string | null> {
+    const result = await pool.query<{ emoji_string: string }>(
+        `SELECT emoji_string FROM emoji WHERE hex = $1`,
+        [hex.toLowerCase()],
+    );
+    return result.rows[0]?.emoji_string ?? null;
+}
+
+export async function upsertEmojiRecord(
+    hex: string,
+    emojiString: string,
+): Promise<void> {
+    await pool.query(
+        `INSERT INTO emoji (hex, emoji_string) VALUES ($1, $2)
+         ON CONFLICT (hex) DO UPDATE SET emoji_string = EXCLUDED.emoji_string`,
+        [hex.toLowerCase(), emojiString],
+    );
+}
+
+export async function deleteEmojiRecord(hex: string): Promise<void> {
+    await pool.query(`DELETE FROM emoji WHERE hex = $1`, [hex.toLowerCase()]);
+}
+
+export async function getEmojiCount(): Promise<number> {
+    const result = await pool.query<{ count: string }>(
+        `SELECT COUNT(*) AS count FROM emoji`,
+    );
+    return parseInt(result.rows[0]?.count ?? "0", 10);
+}
+
+export async function getOldestNonPresetEmoji(
+    presetHexes: string[],
+): Promise<{ hex: string; emoji_string: string } | null> {
+    const result = await pool.query<{ hex: string; emoji_string: string }>(
+        `SELECT hex, emoji_string FROM emoji
+         WHERE hex <> ALL($1::text[])
+         LIMIT 1`,
+        [presetHexes],
+    );
+    return result.rows[0] ?? null;
 }
