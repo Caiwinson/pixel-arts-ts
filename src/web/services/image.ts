@@ -7,7 +7,7 @@ import { sendWebhookMessage } from "./webhook.js";
 import { execFile } from "child_process";
 
 const PIXEL_RENDER_BIN =
-    process.env.TIMELAPSE_RENDER_BIN ?? "/usr/local/bin/timelapse-render";
+    process.env.TIMELAPSE_RENDER_BIN ?? "/usr/local/bin/pixel-render";
 
 function hexStringToCanvas(code: string, size: number): Promise<Buffer> {
     return new Promise((resolve, reject) => {
