@@ -16,11 +16,7 @@ import fs from "fs";
 import { DOMAIN_URL, PREVIEW_PATH } from "../../../constants.js";
 
 const TIMELAPSE_RENDER_BIN =
-    process.env.TIMELAPSE_RENDER_BIN ??
-    path.resolve(
-        process.cwd(),
-        "rust/timelapse-render/target/release/timelapse-render",
-    );
+    process.env.TIMELAPSE_RENDER_BIN ?? "/usr/local/bin/pixel-render";
 
 export function createClosedCanvasView(): ActionRowBuilder<ButtonBuilder>[] {
     const download = new ButtonBuilder()
@@ -138,7 +134,9 @@ export async function generateTimelapseVideo(
         });
 
         proc.on("error", (err) => {
-            reject(new Error(`timelapse-render failed to start: ${err.message}`));
+            reject(
+                new Error(`timelapse-render failed to start: ${err.message}`),
+            );
         });
 
         proc.on("close", (code) => {

@@ -5,11 +5,9 @@ import { NO_PLOT_DIR, PLOT_DIR, PLOT_OVERLAY_PATH } from "../../constants.js";
 import { getCachedImage, storeImageInCache } from "./cache.js";
 import { sendWebhookMessage } from "./webhook.js";
 import { execFile } from "child_process";
-import path from "path";
 
 const PIXEL_RENDER_BIN =
-    process.env.PIXEL_RENDER_BIN ??
-    path.resolve(process.cwd(), "rust/pixel-render/target/release/pixel-render");
+    process.env.TIMELAPSE_RENDER_BIN ?? "/usr/local/bin/timelapse-render";
 
 function hexStringToCanvas(code: string, size: number): Promise<Buffer> {
     return new Promise((resolve, reject) => {
@@ -23,13 +21,13 @@ function hexStringToCanvas(code: string, size: number): Promise<Buffer> {
                 if (err) {
                     reject(
                         new Error(
-                            `pixel-render failed: ${stderr?.toString() ?? err.message}`
-                        )
+                            `pixel-render failed: ${stderr?.toString() ?? err.message}`,
+                        ),
                     );
                     return;
                 }
                 resolve(stdout);
-            }
+            },
         );
     });
 }
