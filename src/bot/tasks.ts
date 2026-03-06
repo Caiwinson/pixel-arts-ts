@@ -103,7 +103,7 @@ export function startTasks(client: Client): void {
     setTimeout(() => {
         postTopggStats(client);
         setInterval(() => postTopggStats(client), TOPGG_INTERVAL_MS);
-    }, 60_000);
+    }, 600_000);
 
     console.log("🔄 Bot tasks started (status rotation + Top.gg stats)");
 }
