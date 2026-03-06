@@ -16,7 +16,7 @@ import fs from "fs";
 import { DOMAIN_URL, PREVIEW_PATH } from "../../../constants.js";
 
 const TIMELAPSE_RENDER_BIN =
-    process.env.TIMELAPSE_RENDER_BIN ?? "/usr/local/bin/pixel-render";
+    process.env.TIMELAPSE_RENDER_BIN ?? "/usr/local/bin/timelapse-render";
 
 export function createClosedCanvasView(): ActionRowBuilder<ButtonBuilder>[] {
     const download = new ButtonBuilder()
