@@ -42,8 +42,8 @@ export const recreateCommandData = new SlashCommandBuilder()
                         { name: "5x5 (default)", value: 5 },
                         { name: "10x10", value: 10 },
                         { name: "15x15", value: 15 },
-                        { name: "20x20 (vote only)", value: 20 },
-                        { name: "25x25 (vote only)", value: 25 },
+                        { name: "20x20", value: 20 },
+                        { name: "25x25", value: 25 },
                     ),
             )
             .addBooleanOption((option) =>
@@ -93,9 +93,6 @@ export async function recreateCommandExecute(
     // ---------- Voting Requirement ----------
     const hasVoted = await checkVote(interaction);
     if (!hasVoted) return;
-
-    // Image processing may take time
-    //await interaction.deferReply(wi);
 
     try {
         // ---------- Fetch Image Manually (more reliable) ----------
