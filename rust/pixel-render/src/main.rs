@@ -159,6 +159,8 @@ fn render(hex_code: &str, size: usize) -> Result<(), Box<dyn std::error::Error>>
     // BitDepth::Eight = each channel is 8 bits (0–255).
     encoder.set_color(png::ColorType::Rgb);
     encoder.set_depth(png::BitDepth::Eight);
+    encoder.set_compression(png::Compression::Best);
+    encoder.set_filter(png::FilterType::Sub);
 
     // `write_header()` outputs the PNG header and returns a writer
     // for the image data.
