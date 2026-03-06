@@ -12,9 +12,15 @@ import {
 import { getCanvasHistory, type CanvasHistoryRow } from "../../../database.js";
 import { spawn } from "child_process";
 import path from "path";
-import os from "os";
 import fs from "fs";
 import { DOMAIN_URL, PREVIEW_PATH } from "../../../constants.js";
+
+const TIMELAPSE_RENDER_BIN =
+    process.env.TIMELAPSE_RENDER_BIN ??
+    path.resolve(
+        process.cwd(),
+        "rust/timelapse-render/target/release/timelapse-render",
+    );
 
 export function createClosedCanvasView(): ActionRowBuilder<ButtonBuilder>[] {
     const download = new ButtonBuilder()
@@ -124,131 +130,32 @@ export async function generateTimelapseVideo(
 ): Promise<void> {
     if (!history.length) throw new Error("No history");
 
-    const size = Math.sqrt(history[0]!.key.length / 6) | 0;
-
-    const videoSize = size === 5 ? 500 : 750;
-
-    const scale = Math.floor(videoSize / size);
-
-    const width = videoSize;
-
-    const height = videoSize;
-
-    const buffer = Buffer.alloc(width * height * 3);
-
-    const pixelMap: number[][] = new Array(size * size);
-
-    for (let py = 0; py < size; py++) {
-        for (let px = 0; px < size; px++) {
-            const indices: number[] = [];
-
-            // map this small pixel to all output pixels it covers
-            for (let y = 0; y < scale; y++) {
-                for (let x = 0; x < scale; x++) {
-                    const sx = px * scale + x; // scaled x
-                    const sy = py * scale + y; // scaled y
-                    const i = (sy * width + sx) * 3; // index in RGB buffer
-                    indices.push(i);
-                }
-            }
-
-            pixelMap[py * size + px] = indices;
-        }
-    }
-
-    let pixels = new Array<string>(size * size).fill("000000");
-
-    const ffmpeg = spawn("ffmpeg", [
-        "-y",
-
-        "-f",
-        "rawvideo",
-
-        "-pix_fmt",
-        "rgb24",
-
-        "-s",
-        `${width}x${height}`,
-
-        "-r",
-        "1",
-
-        "-i",
-        "-",
-
-        "-c:v",
-        "libx264",
-
-        "-pix_fmt",
-        "yuv420p",
-
-        "-preset",
-        "fast",
-
-        "-crf",
-        "18",
-
-        previewPath,
-    ]);
-
-    function writePixel(px: number, py: number, hex: string) {
-        const r = parseInt(hex.slice(0, 2), 16);
-        const g = parseInt(hex.slice(2, 4), 16);
-        const b = parseInt(hex.slice(4, 6), 16);
-
-        // use precomputed indices
-        for (const i of pixelMap[py * size + px]!) {
-            buffer[i] = r;
-            buffer[i + 1] = g;
-            buffer[i + 2] = b;
-        }
-    }
-
-    function renderFullFrame() {
-        for (let i = 0; i < pixels.length; i++) {
-            const x = i % size;
-
-            const y = (i / size) | 0;
-
-            writePixel(x, y, pixels[i]!);
-        }
-    }
-
-    for (const row of history) {
-        const line = row.key.trim();
-
-        if (!line) continue;
-
-        if (!row.is_delta) {
-            pixels = line.match(/.{6}/g)!;
-
-            renderFullFrame();
-        } else {
-            for (const entry of line.split(",")) {
-                const [idxStr, hex] = entry.split(":");
-
-                const idx = Number(idxStr);
-
-                pixels[idx] = hex!;
-
-                const x = idx % size;
-                const y = (idx / size) | 0;
-
-                writePixel(x, y, hex!);
-            }
-        }
-
-        const frameBuffer = Buffer.from(buffer);
-        ffmpeg.stdin.write(frameBuffer);
-    }
-
-    ffmpeg.stdin.end();
-
     await new Promise<void>((resolve, reject) => {
-        ffmpeg.on("close", (code) => {
-            if (code === 0) resolve();
-            else reject();
+        const proc = spawn(TIMELAPSE_RENDER_BIN, [previewPath], {
+            // Pipe stdin so we can write JSON history to it.
+            // stdout/stderr inherit so errors show in your logs.
+            stdio: ["pipe", "inherit", "inherit"],
         });
+
+        proc.on("error", (err) => {
+            reject(new Error(`timelapse-render failed to start: ${err.message}`));
+        });
+
+        proc.on("close", (code) => {
+            if (code === 0) {
+                resolve();
+            } else {
+                reject(new Error(`timelapse-render exited with code ${code}`));
+            }
+        });
+
+        // Write the history JSON and close stdin so the binary sees EOF
+        // and starts processing. This is equivalent to piping:
+        //   echo '[...]' | timelapse-render output.mp4
+        proc.stdin!.write(JSON.stringify(history), (err) => {
+            if (err) reject(err);
+        });
+        proc.stdin!.end();
     });
 }
 

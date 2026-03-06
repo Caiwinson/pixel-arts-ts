@@ -1,0 +1,11 @@
+[package]
+# The name of your binary. Running `cargo build` will produce `pixel-render`
+name = "pixel-render"
+version = "0.1.0"
+# Rust edition — always use 2021 for new projects
+edition = "2021"
+
+[dependencies]
+# `png` is the only dependency — it encodes raw pixel data into a PNG file.
+# We don't need a canvas library at all. We build the pixels ourselves.
+png = "0.17"

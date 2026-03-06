@@ -66,3 +66,7 @@ docker-compose.override.yml
 # Data
 # =========================
 data
+
+# Rust
+rust/pixel-render/target/
+rust/timelapse-render/target/

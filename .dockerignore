@@ -13,3 +13,5 @@ tmp
 temp
 coverage
 docker-compose.override.yml
+rust/pixel-render/target/
+rust/timelapse-render/target/

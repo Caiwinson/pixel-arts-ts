@@ -3,37 +3,35 @@ import * as fs from "fs";
 import * as crypto from "crypto";
 import { NO_PLOT_DIR, PLOT_DIR, PLOT_OVERLAY_PATH } from "../../constants.js";
 import { getCachedImage, storeImageInCache } from "./cache.js";
-import sharp from "sharp";
 import { sendWebhookMessage } from "./webhook.js";
+import { execFile } from "child_process";
+import path from "path";
 
-/**
- * Render pixel art directly at display size — no resize step.
- * 5x5 → 100px/cell (500×500), all others → 50px/cell.
- */
-function hexStringToCanvas(code: string, size: number): Buffer {
-    const scale = size === 5 ? 100 : 50;
-    const dim = size * scale;
+const PIXEL_RENDER_BIN =
+    process.env.PIXEL_RENDER_BIN ??
+    path.resolve(process.cwd(), "rust/pixel-render/target/release/pixel-render");
 
-    const canvas = createCanvas(dim, dim);
-    const ctx = canvas.getContext("2d");
-
-    // Flatten to pure RGB by painting a white background first (eliminates alpha channel)
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, dim, dim);
-
-    let i = 0;
-
-    for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-            const hex = code.slice(i, i + 6);
-            i += 6;
-
-            ctx.fillStyle = `#${hex}`;
-            ctx.fillRect(x * scale, y * scale, scale, scale);
-        }
-    }
-
-    return canvas.toBuffer("image/png");
+function hexStringToCanvas(code: string, size: number): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+        execFile(
+            PIXEL_RENDER_BIN,
+            [code, String(size)],
+            // `encoding: "buffer"` means stdout comes back as a raw Buffer,
+            // not a UTF-8 string — important for binary PNG data.
+            { encoding: "buffer", maxBuffer: 10 * 1024 * 1024 }, // 10 MB max
+            (err, stdout, stderr) => {
+                if (err) {
+                    reject(
+                        new Error(
+                            `pixel-render failed: ${stderr?.toString() ?? err.message}`
+                        )
+                    );
+                    return;
+                }
+                resolve(stdout);
+            }
+        );
+    });
 }
 
 /**
@@ -91,9 +89,8 @@ export async function generateImageData(
 
     if (!basePng) {
         console.info(`Generating base image for hash: ${imgHash}`);
-        basePng = hexStringToCanvas(code, size);
+        basePng = await hexStringToCanvas(code, size); // ← await added
         storeImageInCache(NO_PLOT_DIR, imgHash, basePng);
-
         sendWebhookMessage(size <= 15 ? code : imgHash);
     }
 

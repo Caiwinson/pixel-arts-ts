@@ -15,7 +15,20 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     cp /tmp/ffmpeg/ffmpeg /usr/local/bin/ffmpeg && \
     chmod +x /usr/local/bin/ffmpeg
 
-# ─── Stage 2: Build TypeScript ────────────────────────────────────────────────
+# ─── Stage 2: Build Rust binaries (arch-aware) ───────────────────────────────
+FROM --platform=$TARGETPLATFORM rust:1.78-slim AS rust-builder
+
+WORKDIR /rust
+
+# Copy both crates
+COPY rust/pixel-render ./pixel-render
+COPY rust/timelapse-render ./timelapse-render
+
+# Build both binaries in release mode
+RUN cargo build --release --manifest-path pixel-render/Cargo.toml && \
+    cargo build --release --manifest-path timelapse-render/Cargo.toml
+
+# ─── Stage 3: Build TypeScript ────────────────────────────────────────────────
 FROM node:22-slim AS builder
 
 WORKDIR /app
@@ -28,13 +41,17 @@ COPY src ./src
 
 RUN npm run build
 
-# ─── Stage 3: Production image ────────────────────────────────────────────────
+# ─── Stage 4: Production image ────────────────────────────────────────────────
 FROM node:22-slim AS runner
 
 WORKDIR /app
 
 # Copy ffmpeg binary
 COPY --from=ffmpeg-downloader /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
+
+# Copy Rust binaries
+COPY --from=rust-builder /rust/pixel-render/target/release/pixel-render /usr/local/bin/pixel-render
+COPY --from=rust-builder /rust/timelapse-render/target/release/timelapse-render /usr/local/bin/timelapse-render
 
 # Install production deps only
 COPY package*.json ./
