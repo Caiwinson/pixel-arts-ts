@@ -32,20 +32,16 @@ function hexStringToCanvas(code: string, size: number): Promise<Buffer> {
     });
 }
 
+
+const overlayImg = await loadImage(PLOT_OVERLAY_PATH);
+
 /**
  * Overlay the plot grid on top of a base PNG buffer.
  * Equivalent to img.paste(PLOT_OVERLAY, (0,0), PLOT_OVERLAY).
  */
 async function applyPlotOverlay(basePng: Buffer): Promise<Buffer> {
-    if (!fs.existsSync(PLOT_OVERLAY_PATH)) {
-        console.warn("Plot overlay file not found, returning base image.");
-        return basePng;
-    }
 
-    const [baseImg, overlayImg] = await Promise.all([
-        loadImage(basePng),
-        loadImage(PLOT_OVERLAY_PATH),
-    ]);
+    const baseImg = await loadImage(basePng);
 
     const canvas = createCanvas(baseImg.width, baseImg.height);
     const ctx = canvas.getContext("2d");
