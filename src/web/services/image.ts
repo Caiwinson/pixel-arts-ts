@@ -1,5 +1,4 @@
 import { createCanvas, loadImage } from "@napi-rs/canvas";
-import * as fs from "fs";
 import * as crypto from "crypto";
 import { NO_PLOT_DIR, PLOT_DIR, PLOT_OVERLAY_PATH } from "../../constants.js";
 import { getCachedImage, storeImageInCache } from "./cache.js";
@@ -7,7 +6,7 @@ import { sendWebhookMessage } from "./webhook.js";
 import { execFile } from "child_process";
 
 const PIXEL_RENDER_BIN =
-    process.env.TIMELAPSE_RENDER_BIN ?? "/usr/local/bin/pixel-render";
+    process.env.PIXEL_RENDER_BIN ?? "/usr/local/bin/pixel-render";
 
 function hexStringToCanvas(code: string, size: number): Promise<Buffer> {
     return new Promise((resolve, reject) => {
@@ -32,7 +31,6 @@ function hexStringToCanvas(code: string, size: number): Promise<Buffer> {
     });
 }
 
-
 const overlayImg = await loadImage(PLOT_OVERLAY_PATH);
 
 /**
@@ -40,7 +38,6 @@ const overlayImg = await loadImage(PLOT_OVERLAY_PATH);
  * Equivalent to img.paste(PLOT_OVERLAY, (0,0), PLOT_OVERLAY).
  */
 async function applyPlotOverlay(basePng: Buffer): Promise<Buffer> {
-
     const baseImg = await loadImage(basePng);
 
     const canvas = createCanvas(baseImg.width, baseImg.height);
