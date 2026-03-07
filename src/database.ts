@@ -94,34 +94,14 @@ export async function recordPixelUpdate(
         let keyToStore: string;
         let isDelta: boolean;
 
-        if (rowId === 0 || !dkey) {
+        // Store a full snapshot on row 0 (canvas creation), when there's no delta,
+        // or every 10th row (rowId % 10 === 0) — no extra DB query needed.
+        if (rowId === 0 || !dkey || rowId % 10 === 0) {
             keyToStore = fkey;
             isDelta = false;
         } else {
-            const recentRows = await client.query<{ is_delta: boolean }>(
-                `SELECT is_delta FROM timelapse
-                 WHERE message_id = $1
-                 ORDER BY row_id DESC
-                 LIMIT 10`,
-                [messageId],
-            );
-
-            let consecutiveDeltaCount = 0;
-            for (const row of recentRows.rows) {
-                if (row.is_delta) {
-                    consecutiveDeltaCount++;
-                } else {
-                    break;
-                }
-            }
-
-            if (consecutiveDeltaCount >= 10) {
-                keyToStore = fkey;
-                isDelta = false;
-            } else {
-                keyToStore = dkey;
-                isDelta = true;
-            }
+            keyToStore = dkey;
+            isDelta = true;
         }
 
         await client.query(
