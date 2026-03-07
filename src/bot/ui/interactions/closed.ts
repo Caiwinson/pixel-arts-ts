@@ -14,6 +14,8 @@ import { spawn } from "child_process";
 import path from "path";
 import fs from "fs";
 import { DOMAIN_URL, PREVIEW_PATH } from "../../../constants.js";
+import { get } from "http";
+import { getCanvasKey } from "../../utils.js";
 
 const TIMELAPSE_RENDER_BIN =
     process.env.TIMELAPSE_RENDER_BIN ?? "/usr/local/bin/timelapse-render";
@@ -52,8 +54,18 @@ export async function downloadButtonExecute(interaction: ButtonInteraction) {
         return;
     }
 
+    const lastSegment = url.split("/").pop() ?? "";
+
+    // Remove query string if present; default to empty string if undefined
+    const noQuery = lastSegment.split("?")[0] ?? "";
+
+    // Split on period and take the first part; safe because noQuery is always string
+    const key = noQuery.split(".")[0]!;
     // Fetch the image
-    const response = await fetch(url);
+    const isLarge = url.includes("/image_large/");
+    const imgRoute = isLarge ? "/image_large/" : "/image/";
+
+    const response = await fetch(`${DOMAIN_URL}${imgRoute}${key}`);
 
     if (!response.ok) {
         await interaction.reply({

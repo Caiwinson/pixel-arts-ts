@@ -24,30 +24,77 @@ type PixelSelection = {
 };
 
 type MessageCanvasState = {
-    [userId: string]: PixelSelection; // each user's selected pixel
+    users: { [userId: string]: PixelSelection };
+    lastAccessed: number; // unix ms timestamp
 };
 
 type AdvanceCanvasState = {
-    [messageId: string]: MessageCanvasState; // all users for a message
+    [messageId: string]: MessageCanvasState;
 };
 
+// ---- Config ----
+const STATE_TTL_MS = 60 * 60 * 1000; // evict entries not touched in 1 hour
+const MAX_STATE_ENTRIES = 500; // hard cap on number of tracked messages
+const EVICTION_INTERVAL_MS = 10 * 60 * 1000; // run TTL sweep every 10 minutes
+
 const advanceCanvasState: AdvanceCanvasState = {};
+
+// ---- Eviction ----
+
+function evictExpiredEntries(): void {
+    const now = Date.now();
+    for (const messageId in advanceCanvasState) {
+        if (now - advanceCanvasState[messageId]!.lastAccessed > STATE_TTL_MS) {
+            delete advanceCanvasState[messageId];
+        }
+    }
+}
+
+function evictOldestEntry(): void {
+    let oldestId: string | null = null;
+    let oldestTime = Infinity;
+    for (const messageId in advanceCanvasState) {
+        const t = advanceCanvasState[messageId]!.lastAccessed;
+        if (t < oldestTime) {
+            oldestTime = t;
+            oldestId = messageId;
+        }
+    }
+    if (oldestId) delete advanceCanvasState[oldestId];
+}
+
+// Periodic TTL sweep — keeps memory bounded without per-access overhead
+setInterval(evictExpiredEntries, EVICTION_INTERVAL_MS).unref();
+
+// ---- State access ----
+
+function getOrCreateEntry(messageId: string): MessageCanvasState {
+    const now = Date.now();
+
+    if (!advanceCanvasState[messageId]) {
+        // Enforce hard cap before inserting
+        if (Object.keys(advanceCanvasState).length >= MAX_STATE_ENTRIES) {
+            evictOldestEntry();
+        }
+        advanceCanvasState[messageId] = { users: {}, lastAccessed: now };
+    } else {
+        advanceCanvasState[messageId]!.lastAccessed = now;
+    }
+
+    return advanceCanvasState[messageId]!;
+}
 
 export function getUserSelection(
     messageId: string,
     userId: string,
 ): PixelSelection {
-    // Initialize message entry if missing
-    if (!advanceCanvasState[messageId]) {
-        advanceCanvasState[messageId] = {};
+    const entry = getOrCreateEntry(messageId);
+
+    if (!entry.users[userId]) {
+        entry.users[userId] = { x: 1, y: 1 };
     }
 
-    // Initialize user selection if missing, default x=1, y=1
-    if (!advanceCanvasState[messageId][userId]) {
-        advanceCanvasState[messageId][userId] = { x: 1, y: 1 };
-    }
-
-    return advanceCanvasState[messageId][userId];
+    return entry.users[userId]!;
 }
 
 function createRowOptions(
@@ -142,19 +189,15 @@ export async function rowOptionsExecute(
     const msgId = interaction.message.id;
     const userId = interaction.user.id;
 
-    // Initialize message entry if missing
-    if (!advanceCanvasState[msgId]) advanceCanvasState[msgId] = {};
+    const entry = getOrCreateEntry(msgId);
 
-    // Initialize user selection if missing, default x=1, y=1
-    if (!advanceCanvasState[msgId][userId]) {
-        advanceCanvasState[msgId][userId] = { x: 1, y: 1 };
+    if (!entry.users[userId]) {
+        entry.users[userId] = { x: 1, y: 1 };
     }
 
-    const state = advanceCanvasState[msgId][userId];
+    const state = entry.users[userId]!;
 
-    // Update the value based on selection
-    const selectedValue = interaction.values[0]!;
-    const numericValue = parseInt(selectedValue);
+    const numericValue = parseInt(interaction.values[0]!);
 
     if (type === "x") state.x = numericValue;
     else state.y = numericValue;
