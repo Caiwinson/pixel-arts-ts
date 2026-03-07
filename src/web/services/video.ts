@@ -9,6 +9,27 @@ export interface VideoResult {
 }
 
 /**
+ * Validates that value is a pure numeric ID (5–20 digits) and returns the
+ * sanitized match string, breaking the taint chain for CodeQL.
+ */
+function validateNumericId(value: string): string | null {
+    const m = /^([0-9]{5,20})$/.exec(value);
+    return m ? m[1]! : null;
+}
+
+/**
+ * Builds a path guaranteed to stay inside baseDir, throws otherwise.
+ */
+function safePathInDir(baseDir: string, filename: string): string {
+    const resolved = path.resolve(baseDir, filename);
+    const base = path.resolve(baseDir);
+    if (!resolved.startsWith(base + path.sep) && resolved !== base) {
+        throw new Error("Path traversal detected");
+    }
+    return resolved;
+}
+
+/**
  * Returns the path to the video at the requested speed.
  * If speed === 1, returns the original file without running ffmpeg.
  */
@@ -16,7 +37,18 @@ export async function generateDownloadVideo(
     videoId: string,
     speed: number,
 ): Promise<VideoResult> {
-    const inputPath = path.join(PREVIEW_PATH, `${videoId}.mp4`);
+    // Re-validate and extract a clean ID from the match result itself
+    const cleanId = validateNumericId(videoId);
+    if (!cleanId) {
+        return { outputPath: null, error: "Invalid video ID" };
+    }
+
+    let inputPath: string;
+    try {
+        inputPath = safePathInDir(PREVIEW_PATH, `${cleanId}.mp4`);
+    } catch {
+        return { outputPath: null, error: "Invalid video ID" };
+    }
 
     if (!fs.existsSync(inputPath)) {
         return { outputPath: null, error: "Preview not found" };
@@ -28,7 +60,13 @@ export async function generateDownloadVideo(
     }
 
     const fps = Math.min(speed, 60); // Cap FPS to 60
-    const outputPath = path.join(PREVIEW_PATH, `${videoId}-${speed}.mp4`);
+
+    let outputPath: string;
+    try {
+        outputPath = safePathInDir(PREVIEW_PATH, `${cleanId}-${speed}.mp4`);
+    } catch {
+        return { outputPath: null, error: "Invalid video ID" };
+    }
 
     if (fs.existsSync(outputPath)) {
         return { outputPath, error: null };
@@ -39,19 +77,19 @@ export async function generateDownloadVideo(
     } catch (err: any) {
         if (err.message === "timeout") {
             console.error(
-                `Video processing timeout for ${videoId} at speed ${speed}`,
+                `Video processing timeout for ${cleanId} at speed ${speed}`,
             );
             return { outputPath: null, error: "Video processing timeout" };
         }
         console.error(
-            `Error generating video for ${videoId} at speed ${speed}: ${err}`,
+            `Error generating video for ${cleanId} at speed ${speed}: ${err}`,
         );
         return { outputPath: null, error: "Error generating video" };
     }
 
     if (!fs.existsSync(outputPath)) {
         console.error(
-            `FFmpeg failed to create output file for ${videoId} at speed ${speed}`,
+            `FFmpeg failed to create output file for ${cleanId} at speed ${speed}`,
         );
         return { outputPath: null, error: "Error generating video" };
     }
@@ -67,10 +105,6 @@ function runFfmpeg(
     timeoutMs = 30_000,
 ): Promise<void> {
     return new Promise((resolve, reject) => {
-        // `tpad` adds a hold of the last frame for (speed) extra seconds so that
-        // after PTS compression the final frame survives at least one output sample.
-        // Without this, the last frame is almost always dropped when speed > 1
-        // because it falls outside the last fps-filter sample window.
         const vf = `tpad=stop_mode=clone:stop_duration=${speed},fps=${fps},setpts=PTS/${speed}`;
 
         const ffmpeg = spawn("ffmpeg", [

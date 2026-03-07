@@ -29,6 +29,28 @@ function stripExtension(value: string): string {
     return value.split(".")[0]!;
 }
 
+/**
+ * Validates that value is a pure numeric ID (5–20 digits) and returns the
+ * sanitized match string, breaking the taint chain for CodeQL.
+ */
+function validateNumericId(value: string): string | null {
+    const m = /^([0-9]{5,20})$/.exec(value);
+    return m ? m[1]! : null;
+}
+
+/**
+ * Builds a path guaranteed to stay inside baseDir, throws otherwise.
+ * The containment check gives CodeQL a definitive proof the path is safe.
+ */
+function safePathInDir(baseDir: string, filename: string): string {
+    const resolved = path.resolve(baseDir, filename);
+    const base = path.resolve(baseDir);
+    if (!resolved.startsWith(base + path.sep) && resolved !== base) {
+        throw new Error("Path traversal detected");
+    }
+    return resolved;
+}
+
 const downloadLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 10,
@@ -54,21 +76,18 @@ videoRouter.get("/download/:code", downloadLimiter, (async (
     req: Request<DownloadParams>,
     res: Response,
 ) => {
-    let code = stripExtension(req.params.code);
+    const code = stripExtension(req.params.code);
 
-    const parts = code.split("-");
-    const vid = parts[0]!;
-
-    let speed = 1;
-    if (parts.length === 2) {
-        const parsed = parseInt(parts[1]!);
-        speed = parsed > 0 ? parsed : 1;
-    }
-
-    if (!/^[0-9]{5,20}$/.test(vid)) {
+    // Accept either "<videoId>" or "<videoId>-<speed>" where videoId is numeric
+    const m = /^([0-9]{5,20})(?:-([1-9][0-9]*))?$/.exec(code);
+    if (!m) {
         res.status(400).send("Invalid video ID");
         return;
     }
+
+    // Use only the captured groups — taint is broken here
+    const vid = m[1]!;
+    const speed = m[2] ? parseInt(m[2], 10) : 1;
 
     const { outputPath, error } = await generateDownloadVideo(vid, speed);
 
@@ -80,10 +99,18 @@ videoRouter.get("/download/:code", downloadLimiter, (async (
         return;
     }
 
+    let safePath: string;
+    try {
+        safePath = safePathInDir(PREVIEW_PATH, path.basename(outputPath));
+    } catch {
+        res.status(400).send("Invalid path");
+        return;
+    }
+
     res.setHeader("Content-Type", "video/mp4");
     res.setHeader("Cache-Control", "public, max-age=3600");
-    res.setHeader("ETag", String(fs.statSync(outputPath).mtimeMs));
-    res.sendFile(path.resolve(outputPath));
+    res.setHeader("ETag", String(fs.statSync(safePath).mtimeMs));
+    res.sendFile(safePath);
 }) as unknown as RequestHandler);
 
 /**
@@ -96,12 +123,19 @@ videoRouter.get("/preview/:code", previewLimiter, ((
 ) => {
     const raw = stripExtension(req.params.code);
 
-    if (!/^[0-9]{5,20}$/.test(raw)) {
+    const cleanId = validateNumericId(raw);
+    if (!cleanId) {
         res.status(400).send("Invalid preview ID");
         return;
     }
 
-    const filePath = path.join(PREVIEW_PATH, `${raw}.mp4`);
+    let filePath: string;
+    try {
+        filePath = safePathInDir(PREVIEW_PATH, `${cleanId}.mp4`);
+    } catch {
+        res.status(400).send("Invalid path");
+        return;
+    }
 
     if (!fs.existsSync(filePath)) {
         res.status(404).send("Preview not found");
@@ -122,22 +156,28 @@ videoRouter.get("/canvas-history/:messageId", previewLimiter, (async (
     req: Request<HistoryParams>,
     res: Response,
 ) => {
-    const { messageId } = req.params;
-
-    if (!/^[0-9]{5,20}$/.test(messageId)) {
+    const cleanId = validateNumericId(req.params.messageId);
+    if (!cleanId) {
         res.status(400).send("Invalid message ID");
         return;
     }
 
     // Auth: only serve history if the timelapse video already exists
-    const videoPath = path.join(PREVIEW_PATH, `${messageId}.mp4`);
+    let videoPath: string;
+    try {
+        videoPath = safePathInDir(PREVIEW_PATH, `${cleanId}.mp4`);
+    } catch {
+        res.status(400).send("Invalid path");
+        return;
+    }
+
     if (!fs.existsSync(videoPath)) {
         res.status(404).send("Timelapse not found");
         return;
     }
 
     try {
-        const history = await getCanvasHistory(messageId);
+        const history = await getCanvasHistory(cleanId);
 
         if (!history || history.length === 0) {
             res.status(404).send("No history found");
@@ -153,7 +193,7 @@ videoRouter.get("/canvas-history/:messageId", previewLimiter, (async (
 
         res.json(safe);
     } catch (err) {
-        console.error(`Canvas history fetch failed for ${messageId}: ${err}`);
+        console.error(`Canvas history fetch failed for ${cleanId}: ${err}`);
         res.status(500).send("Error fetching history");
     }
 }) as unknown as RequestHandler);
