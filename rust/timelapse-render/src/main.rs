@@ -1,75 +1,27 @@
-// ============================================================
-//  timelapse-render
-//  Replaces generateTimelapseVideo() in
-//  src/bot/ui/interactions/closed.ts
-//
-//  Usage:
-//    timelapse-render <output_path> < history.json
-//
-//  Reads canvas history rows as JSON from stdin, renders each
-//  frame into a raw RGB buffer, and pipes the frames directly
-//  into ffmpeg's stdin to produce an mp4 file.
-//
-//  The TypeScript side calls it like:
-//    const proc = spawn("timelapse-render", [previewPath]);
-//    proc.stdin.write(JSON.stringify(history));
-//    proc.stdin.end();
-// ============================================================
-
-// Standard library imports
+// Replaces generateTimelapseVideo() in src/bot/ui/interactions/closed.ts
 use std::env;
 use std::io::{self, BufReader, Read, Write};
 use std::process::{self, Command, Stdio};
-
-// Third-party: serde_json lets us parse JSON from stdin
 use serde::Deserialize;
 
-// ============================================================
-//  DATA TYPES
-//  These mirror the CanvasHistoryRow interface in database.ts
-// ============================================================
-
-// `#[derive(Deserialize)]` automatically generates code to parse
-// this struct from JSON. Without it we'd have to write the parsing
-// manually. It's like TypeScript's `z.object({...})` in Zod.
-//
-// `#[allow(dead_code)]` silences warnings for fields we receive
-// from JSON but don't use in the render logic.
 #[derive(Deserialize)]
 struct HistoryRow {
-    // row_id isn't used in rendering but is part of the JSON payload
     #[allow(dead_code)]
     row_id: u32,
-
-    // The canvas state: either a full hex string (is_delta=false)
-    // or a delta string like "4:ff0000,12:ffffff" (is_delta=true)
     key: String,
-
-    // Whether this row is a delta (partial update) or a full frame
     is_delta: bool,
 }
-
-// ============================================================
-//  ENTRY POINT
-// ============================================================
 
 fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 2 {
         eprintln!("Usage: timelapse-render <output_path>");
-        eprintln!("History JSON is read from stdin.");
         process::exit(1);
     }
 
     let output_path = &args[1];
 
-    // ---- Read all of stdin into a String ----
-    // The TypeScript side writes JSON.stringify(history) to our stdin.
-    // We need to read it all before parsing.
-    //
-    // `BufReader` wraps stdin with buffering for efficiency.
-    // `read_to_string` reads until EOF into a String.
     let mut input = String::new();
     BufReader::new(io::stdin())
         .read_to_string(&mut input)
@@ -78,9 +30,6 @@ fn main() {
             process::exit(1);
         });
 
-    // ---- Parse JSON ----
-    // `serde_json::from_str` is like JSON.parse().
-    // The `: Vec<HistoryRow>` annotation tells serde what type to produce.
     let history: Vec<HistoryRow> = serde_json::from_str(&input).unwrap_or_else(|e| {
         eprintln!("Failed to parse history JSON: {}", e);
         process::exit(1);
@@ -97,14 +46,7 @@ fn main() {
     }
 }
 
-// ============================================================
-//  RENDER
-//  Mirrors generateTimelapseVideo() exactly
-// ============================================================
-
 fn render(history: &[HistoryRow], output_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-    // Derive canvas size from the first full-frame key length.
-    // Each pixel = 6 hex chars, so: size = sqrt(key.len() / 6)
     let first_full = history
         .iter()
         .find(|r| !r.is_delta)
@@ -117,22 +59,11 @@ fn render(history: &[HistoryRow], output_path: &str) -> Result<(), Box<dyn std::
         return Err("Invalid canvas size derived from history".into());
     }
 
-    // Mirror the TS video size logic:
-    //   5×5  → 500px output
-    //   rest → 750px output
     let video_size = if size == 5 { 500 } else { 750 };
     let scale = video_size / size;
     let width = video_size;
     let height = video_size;
 
-    // ---- Precompute pixel map ----
-    // For each canvas cell (px, py), store all the byte indices in the
-    // flat RGB buffer that this cell covers.
-    //
-    // This avoids recomputing sx/sy/i for every cell on every frame.
-    // In the TS version this was `pixelMap: number[][]`.
-    //
-    // `Vec<Vec<usize>>` = a Vec of Vecs of usize (like number[][] in TS).
     let mut pixel_map: Vec<Vec<usize>> = vec![Vec::new(); size * size];
 
     for py in 0..size {
@@ -150,49 +81,34 @@ fn render(history: &[HistoryRow], output_path: &str) -> Result<(), Box<dyn std::
         }
     }
 
-    // ---- Allocate the frame buffer ----
-    // One flat Vec<u8> holding RGB bytes for the entire output frame.
-    // Starts as all-black; we overwrite it per frame.
     let mut buffer: Vec<u8> = vec![0u8; width * height * 3];
-
-    // `pixels` tracks the current hex colour of each canvas cell.
-    // Starts all black, updated by full frames and deltas.
-    // Each entry is 6 ASCII bytes ("rrggbb") stored as [u8; 6].
     let mut pixels: Vec<[u8; 6]> = vec![*b"000000"; size * size];
 
-    // ---- Spawn ffmpeg ----
-    // We pipe raw RGB frames into ffmpeg's stdin just like the TS version did.
-    // `Command` is Rust's equivalent of Node's `spawn`.
     let mut ffmpeg = Command::new("ffmpeg")
         .args([
-            "-y",                         // overwrite output file
-            "-f", "rawvideo",             // input is raw pixels, no container
-            "-pix_fmt", "rgb24",          // 3 bytes per pixel: R, G, B
+            "-y",
+            "-f", "rawvideo",
+            "-pix_fmt", "rgb24",
             "-s", &format!("{}x{}", width, height),
-            "-r", "1",                    // 1 frame per second (each row = 1 frame)
-            "-i", "-",                    // read from stdin
+            "-r", "1",
+            "-i", "-",
             "-c:v", "libx264",
-            "-pix_fmt", "yuv420p",        // required for broad player compatibility
+            "-pix_fmt", "yuv420p",
             "-preset", "fast",
-            "-crf", "18",                 // quality: lower = better, 18 is near-lossless
+            "-crf", "18",
             output_path,
         ])
-        // `Stdio::piped()` means we get a handle to write to ffmpeg's stdin.
-        // This is equivalent to `ffmpeg.stdin` in Node's spawn.
         .stdin(Stdio::piped())
-        .stdout(Stdio::null())  // suppress ffmpeg's stdout
-        .stderr(Stdio::null())  // suppress ffmpeg's progress output
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .spawn()
         .map_err(|e| format!("Failed to spawn ffmpeg: {}. Is ffmpeg installed?", e))?;
 
-    // Unwrap the stdin handle. It's guaranteed to exist because we used Stdio::piped().
-    // `as_mut()` gives us a mutable reference without consuming the Option.
     let ffmpeg_stdin = ffmpeg
         .stdin
         .as_mut()
         .ok_or("Failed to get ffmpeg stdin")?;
 
-    // ---- Process each history row ----
     for row in history {
         let line = row.key.trim();
         if line.is_empty() {
@@ -200,68 +116,49 @@ fn render(history: &[HistoryRow], output_path: &str) -> Result<(), Box<dyn std::
         }
 
         if !row.is_delta {
-            // ---- Full frame ----
-            // The key is the entire canvas state as one long hex string.
-            // Split it into 6-char chunks, one per pixel.
             let key_bytes = line.as_bytes();
 
             if key_bytes.len() != size * size * 6 {
-                // Skip malformed rows rather than crashing
                 continue;
             }
 
             for i in 0..size * size {
-                // Copy 6 bytes ("rrggbb") from the key into pixels[i]
                 pixels[i].copy_from_slice(&key_bytes[i * 6..i * 6 + 6]);
             }
 
-            // Render the full frame into the buffer
             render_full_frame(&pixels, &pixel_map, &mut buffer, size);
         } else {
-            // ---- Delta frame ----
-            // The key is a comma-separated list of "idx:rrggbb" entries.
-            // Example: "4:ff0000,12:ffffff"
             for entry in line.split(',') {
-                // Find the colon separating index from hex value
                 let colon = match entry.find(':') {
                     Some(pos) => pos,
-                    None => continue, // malformed entry, skip
+                    None => continue,
                 };
 
                 let idx_str = &entry[..colon];
                 let hex_str = &entry[colon + 1..];
 
-                // Parse the pixel index
                 let idx: usize = match idx_str.parse() {
                     Ok(v) => v,
                     Err(_) => continue,
                 };
 
-                // Validate bounds and hex length
                 if idx >= size * size || hex_str.len() != 6 {
                     continue;
                 }
 
-                // Update just this pixel's colour
                 pixels[idx].copy_from_slice(hex_str.as_bytes());
 
-                // Write only this one cell into the buffer (faster than full re-render)
                 let hex = pixels[idx];
                 let (r, g, b) = parse_hex_colour(&hex)?;
                 write_cell_to_buffer(r, g, b, &pixel_map[idx], &mut buffer);
             }
         }
 
-        // Write the current frame to ffmpeg.
-        // `write_all` ensures all bytes are written even if the OS does it in chunks.
         ffmpeg_stdin.write_all(&buffer)?;
     }
 
-    // Drop stdin to signal EOF to ffmpeg (it will then finish encoding)
-    // Dropping the handle closes the pipe — ffmpeg sees EOF and finalises the file.
     drop(ffmpeg.stdin.take());
 
-    // Wait for ffmpeg to finish and check its exit code
     let status = ffmpeg.wait()?;
     if !status.success() {
         return Err(format!(
@@ -274,12 +171,6 @@ fn render(history: &[HistoryRow], output_path: &str) -> Result<(), Box<dyn std::
     Ok(())
 }
 
-// ============================================================
-//  HELPERS
-// ============================================================
-
-/// Render every pixel cell into the output buffer.
-/// Called when we have a full frame (is_delta = false).
 fn render_full_frame(
     pixels: &[[u8; 6]],
     pixel_map: &[Vec<usize>],
@@ -289,8 +180,6 @@ fn render_full_frame(
     for py in 0..size {
         for px in 0..size {
             let cell_idx = py * size + px;
-            // We can't use ? inside a void function, so we ignore parse errors
-            // on individual pixels (they'd just render as black).
             if let Ok((r, g, b)) = parse_hex_colour(&pixels[cell_idx]) {
                 write_cell_to_buffer(r, g, b, &pixel_map[cell_idx], buffer);
             }
@@ -298,8 +187,6 @@ fn render_full_frame(
     }
 }
 
-/// Write a single colour into all buffer positions covered by one canvas cell.
-/// `indices` is the precomputed list of byte offsets for this cell.
 #[inline]
 fn write_cell_to_buffer(r: u8, g: u8, b: u8, indices: &[usize], buffer: &mut [u8]) {
     for &i in indices {
@@ -309,8 +196,6 @@ fn write_cell_to_buffer(r: u8, g: u8, b: u8, indices: &[usize], buffer: &mut [u8
     }
 }
 
-/// Parse a 6-byte ASCII hex colour like b"ff0000" into (r, g, b).
-/// Uses the same lookup-table approach as pixel-render for speed.
 #[inline]
 fn parse_hex_colour(hex: &[u8; 6]) -> Result<(u8, u8, u8), String> {
     let r = parse_hex_byte(hex[0], hex[1])?;
@@ -319,8 +204,6 @@ fn parse_hex_colour(hex: &[u8; 6]) -> Result<(u8, u8, u8), String> {
     Ok((r, g, b))
 }
 
-/// Convert two ASCII hex characters into one byte value.
-/// Same compile-time lookup table as pixel-render.
 #[inline]
 fn parse_hex_byte(hi: u8, lo: u8) -> Result<u8, String> {
     static HEX_TABLE: [u8; 256] = {
@@ -353,10 +236,6 @@ fn parse_hex_byte(hi: u8, lo: u8) -> Result<u8, String> {
     Ok((high << 4) | low)
 }
 
-// ============================================================
-//  TESTS
-// ============================================================
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -385,7 +264,6 @@ mod tests {
 
     #[test]
     fn test_pixel_map_coverage() {
-        // For a 5×5 canvas at scale 100, each cell should cover 100*100 = 10000 indices
         let size = 5;
         let video_size = 500;
         let scale = video_size / size;
@@ -411,9 +289,8 @@ mod tests {
             assert_eq!(cell.len(), scale * scale);
         }
 
-        // Total unique indices = all pixels in the frame
         let all_indices: std::collections::HashSet<usize> =
             pixel_map.iter().flatten().copied().collect();
-        assert_eq!(all_indices.len(), width * video_size); // width * height
+        assert_eq!(all_indices.len(), width * video_size);
     }
 }
